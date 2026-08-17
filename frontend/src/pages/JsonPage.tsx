@@ -1,6 +1,7 @@
 import {useRef, useState} from 'react';
 import {JSONService} from '../../bindings/tool-dev/internal/services';
 import {useNotice} from '../components/Notice';
+import JsonEditor from '../components/JsonEditor';
 import styles from './JsonPage.module.css';
 
 // JSON 工具页：顶部「代码/树形」切换 + 输入区。
@@ -110,13 +111,9 @@ export default function JsonPage() {
         <button className={view === 'tree' ? styles.tabActive : ''} onClick={() => setView('tree')}>树形</button>
       </div>
       {view === 'code' ? (
-        <textarea
-          className={`code ${styles.editor}`}
-          value={input}
-          onChange={e => setInput(e.target.value)}
-          placeholder="粘贴或输入 JSON ..."
-          spellCheck={false}
-        />
+        <div className={styles.editorWrap}>
+          <JsonEditor value={input} onChange={setInput}/>
+        </div>
       ) : (
         <div className={styles.treePlaceholder}>树视图（待实现）</div>
       )}
