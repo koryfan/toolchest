@@ -13,3 +13,4 @@ build/android/overlay.json
 build/android/gen/
 # 编译产物
 tool-dev
+.superpowers/
