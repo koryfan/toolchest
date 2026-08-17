@@ -1,6 +1,8 @@
 package services
 
 import (
+	"reflect"
+
 	"tool-dev/internal/config"
 	"tool-dev/internal/tools"
 	"tool-dev/internal/toolset"
@@ -21,8 +23,12 @@ func (s *AppService) Invoke(toolID, op, arg string) tools.Result {
 	if t == nil {
 		return tools.Result{IsError: true, Notice: "未知工具: " + toolID}
 	}
+	before := toolset.Snapshot()
 	r := t.Invoke(op, arg)
-	_ = config.Save(toolset.Snapshot())
+	// spec：改变状态时同步写盘——快照对比，没变就不写
+	if after := toolset.Snapshot(); !reflect.DeepEqual(before, after) {
+		_ = config.Save(after) // 写失败不阻断操作
+	}
 	return r
 }
 
