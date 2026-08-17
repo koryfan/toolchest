@@ -1,10 +1,77 @@
 .page {
   flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  padding: 14px;
+  gap: 14px;
+  overflow: auto;
 }
 
-.placeholder {
+.inputBar {
+  display: flex;
+  gap: 8px;
+}
+
+.input {
+  flex: 1;
+  max-width: 420px;   /* 输入内容不长，别跟着窗口无限拉长 */
+  padding: 8px 12px;
+  background: var(--bg-input);
+  color: var(--color-text);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: '"Maple Mono", monospace';
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgb(70, 75, 170);
+}
+
+.btn {
+  padding: 8px 18px;
+  background: transparent;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: rgba(100, 230, 140, 0.1);
+}
+
+.results {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.row:hover {
+  background: var(--color-hover);
+}
+
+.label {
+  width: 90px;
+  flex-shrink: 0;
   color: var(--leaf-null);
+  font-size: 13px;
+}
+
+.value {
+  color: var(--color-text);
+  font-size: 15px;
+  font-family: '"Maple Mono", monospace';
 }
