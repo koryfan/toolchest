@@ -27,7 +27,7 @@ internal/tools/                # 工具域：接口 + 注册表（唯一注册�
   timetool/tool.go             # 时间戳工具：同构
 internal/config/               # 配置持久化：~/.config/tool-dev/config.json 读写
 internal/transform/            # 纯函数库保留不动（jsontool 调用）
-internal/services/             # 桥接层收口：只剩 Tools() 与 Invoke() 两个方法
+internal/services/             # 桥接层收口：Tools() / Invoke() / UpdateContent() 三个方法
 frontend/src/
   store.ts                     # zustand 全局内容镜像：setContent(本地+debounce 推 Go)/replaceContent/flush
   App.tsx                      # 骨架：拉 Tools() 渲染侧栏/工具栏，内容区查 contentRegistry
@@ -73,7 +73,7 @@ type Action interface{ action() }
 
 type Button struct {          // 工具栏纯文字按钮
     ID, Label string
-    Local   string            // 空 = Invoke("toolID", ID, input)；非空 = 前端 handler 注册表函数名（如 "clear"/"copy"）
+    Local   string            // 空 = Invoke("toolID", ID, arg)；非空 = 前端 handler 注册表函数名（如 "clear"/"copy"）
 }
 
 type Menu struct {            // 「更多」式下拉菜单
@@ -88,7 +88,20 @@ type RadioGroup struct {      // 「设置」式选项组（带选中态，选�
 }
 ```
 
-序列化为 tagged union（`"type": "button"|"menu"|"radio"`）经 bindings 生成 TS 类型。
+序列化不用 Go interface（Wails bindings 对 interface 的类型生成不可靠），而是判别字段 struct：
+
+```go
+type Action struct {
+    Type   string      // "button" | "menu" | "radio"
+    ID, Label string
+    Local  string      // button 专用
+    Items  []MenuItem  // menu 专用
+    Options []RadioOption // radio 专用
+    Current string     // radio 专用
+}
+```
+
+Go 侧工具内部仍可用独立构造函数（`NewButton(...)`/`NewMenu(...)`）生成 Action，保持配置可读性。
 
 ### 状态与持久化
 
@@ -146,7 +159,7 @@ Tool.Invoke 签名去掉 input 参数（原设计 `Invoke(op, input, arg)` → `
 ## 分步实施（每步独立可验证，做完停下等 review）
 
 1. **Go 侧工具域**：`internal/tools/` 接口 + Action 类型 + jsontool/timetool 实现（含状态字段）+
-   `internal/config/` 持久化 + services 收口成 `Tools()/Invoke()` + 单测。前端未动，Go 先立稳。
+   `internal/config/` 持久化 + services 收口成 `Tools()/Invoke()/UpdateContent()` + 单测。前端未动，Go 先立稳。
 2. **前端通用渲染器 + 全局 store**：zustand store（setContent/replaceContent/flush + debounce 推送）、
    Toolbar 吃 Action 配置（三形态 + local handler 注册表）、App 拉 `Tools()` 渲染侧栏、内容组件接 store、
    删各页面旧 Actions 组件，bindings 重新生成。
