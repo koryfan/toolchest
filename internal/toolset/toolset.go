@@ -5,8 +5,8 @@ package toolset
 import (
 	"tool-dev/internal/config"
 	"tool-dev/internal/domain"
-	"tool-dev/internal/jsontool"
-	"tool-dev/internal/timetool"
+	"tool-dev/internal/tools/jsontool"
+	"tool-dev/internal/tools/timetool"
 )
 
 var all = []domain.Tool{

@@ -63,6 +63,11 @@ type RadioOption struct {
 	Label string `json:"label"`
 }
 
+// OpHandler 工具操作的执行回调：arg 仅 radio 类携带选中值。
+// 实现直接访问工具自身状态并在构造的 Result 里给出
+// 新内容/提示/变化后的操作区配置（Invoke 会在持有工具锁时调用）。
+type OpHandler func(arg string) Result
+
 // ToolDesc Tools() 下发单元：元信息 + 操作区配置
 type ToolDesc struct {
 	Meta    Meta     `json:"meta"`

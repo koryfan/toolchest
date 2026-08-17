@@ -1,13 +1,13 @@
 // Package services 收纳暴露给前端（Wails 绑定）的服务：
-// 每个工具一个 Service 结构体，方法直接调用 internal/transform 等纯逻辑层，
+// 每个工具一个 Service 结构体，方法走工具域（toolset/jsontool 等），
 // 本层不做业务逻辑，只做 Go↔前端的桥接。
 package services
 
 import (
-	"tool-dev/internal/transform"
+	"tool-dev/internal/tools/jsontool"
 )
 
-// JSONService JSON 工具的后端服务（操作均返回 结果+错误，错误显示在前端提示区）
+// JSONService JSON 工具的旧版服务（前端迁移到 AppService 后删除）
 type JSONService struct{}
 
 // OpResult 是所有操作的统一返回：成功 Content 有值，失败 Error 有值
@@ -18,55 +18,54 @@ type OpResult struct {
 
 // Pretty 格式化（indent 为缩进字符串，如 "  " 或 "\t"）
 func (s *JSONService) Pretty(input, indent string) OpResult {
-	tr := transform.NewJSONTransformer(input)
-	tr.SetIndent(indent)
-	if err := tr.DoPretty(); err != nil {
+	content, err := jsontool.Pretty(input, indent)
+	if err != nil {
 		return OpResult{Error: err.Error()}
 	}
-	return OpResult{Content: tr.GetString()}
+	return OpResult{Content: content}
 }
 
 // Minify 压缩
 func (s *JSONService) Minify(input string) OpResult {
-	tr := transform.NewJSONTransformer(input)
-	if err := tr.DoMinify(); err != nil {
+	content, err := jsontool.Minify(input)
+	if err != nil {
 		return OpResult{Error: err.Error()}
 	}
-	return OpResult{Content: tr.GetString()}
+	return OpResult{Content: content}
 }
 
 // Escape 转义
 func (s *JSONService) Escape(input string) OpResult {
-	tr := transform.NewJSONTransformer(input)
-	if err := tr.DoEscape(); err != nil {
+	content, err := jsontool.Escape(input)
+	if err != nil {
 		return OpResult{Error: err.Error()}
 	}
-	return OpResult{Content: tr.GetString()}
+	return OpResult{Content: content}
 }
 
 // Unescape 反转义
 func (s *JSONService) Unescape(input string) OpResult {
-	tr := transform.NewJSONTransformer(input)
-	if err := tr.DoUnescape(); err != nil {
+	content, err := jsontool.Unescape(input)
+	if err != nil {
 		return OpResult{Error: err.Error()}
 	}
-	return OpResult{Content: tr.GetString()}
+	return OpResult{Content: content}
 }
 
 // ChineseToUnicode 中文 → Unicode
 func (s *JSONService) ChineseToUnicode(input string) OpResult {
-	tr := transform.NewJSONTransformer(input)
-	if err := tr.DoChineseToUnicode(); err != nil {
+	content, err := jsontool.ChineseToUnicode(input)
+	if err != nil {
 		return OpResult{Error: err.Error()}
 	}
-	return OpResult{Content: tr.GetString()}
+	return OpResult{Content: content}
 }
 
 // UnicodeToChinese Unicode → 中文
 func (s *JSONService) UnicodeToChinese(input string) OpResult {
-	tr := transform.NewJSONTransformer(input)
-	if err := tr.DoUnicodeToChinese(); err != nil {
+	content, err := jsontool.UnicodeToChinese(input)
+	if err != nil {
 		return OpResult{Error: err.Error()}
 	}
-	return OpResult{Content: tr.GetString()}
+	return OpResult{Content: content}
 }
