@@ -5,6 +5,8 @@ package tools
 
 import "sync"
 
+import "tool-dev/internal/tools/jsontool"
+
 // Tool 工具契约：Meta 元信息，Actions 操作区配置（含选中态），
 // Invoke 执行操作（内容权威在工具自身，直接用持有副本计算），
 // SetContent 同步前端镜像内容，Save/LoadState 设置类状态持久化钩子。
@@ -79,7 +81,7 @@ func NewRadio(id, label string, options []RadioOption, current string) Action {
 
 var (
 	mu  sync.Mutex
-	all []Tool
+	all = []Tool{jsontool.New()}
 )
 
 // All 返回注册表副本
