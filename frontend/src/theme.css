@@ -1,0 +1,53 @@
+/* 深色主题（JSON Hero 风格）——配色沿用 Fyne 版 theme.go 定稿值
+   改样式优先改这里的变量，不要在组件里写死颜色 */
+:root {
+  --bg: rgb(28, 30, 38);            /* 主背景 */
+  --bg-sidebar: rgb(20, 22, 28);    /* 侧栏背景（更暗） */
+  --bg-input: rgb(40, 43, 53);      /* 输入框背景 */
+  --bg-titlebar: rgb(24, 26, 33);
+  --color-text: rgb(210, 214, 226); /* 默认文字 */
+  --color-title: rgb(230, 232, 240);
+  --color-accent: rgb(100, 230, 140); /* accent 绿 */
+  --color-error: rgb(230, 90, 90);
+  --color-selected: rgb(70, 75, 170); /* 选中蓝紫 */
+  --color-hover: rgb(62, 66, 82);
+  --color-divider: rgb(50, 54, 66);
+  /* 树视图分色 */
+  --leaf-string: rgb(112, 219, 184);
+  --leaf-number: rgb(103, 166, 228);
+  --leaf-bool: rgb(235, 153, 71);
+  --leaf-null: rgb(121, 125, 134);
+  --leaf-key: rgb(199, 202, 209);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body, #root { height: 100%; }
+
+body {
+  background: var(--bg);
+  color: var(--color-text);
+  font-family: "HarmonyOS Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+code, pre, textarea.code {
+  font-family: "Maple Mono", "Maple Mono NF", monospace;
+}
+
+/* 工具栏右侧操作按钮（全局类，所有工具页共用）。
+   放 theme.css 而非组件 CSS Modules——Modules 的类名 hash 化后，
+   嵌套跨组件时选择器对不上（曾导致按钮退回系统默认样式）。 */
+.toolbar-actions { display: flex; align-items: center; gap: 4px; }
+.toolbar-actions button {
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: inherit;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.toolbar-actions button:hover { color: var(--color-accent); }

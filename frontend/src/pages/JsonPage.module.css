@@ -1,0 +1,84 @@
+.page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.viewTabs {
+  display: flex;
+  gap: 2px;
+  padding: 10px 14px 6px;
+}
+
+.viewTabs > button {
+  border: none;
+  background: transparent;
+  color: var(--color-text);
+  font-size: 14px;
+  font-family: inherit;
+  padding: 4px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.viewTabs > button:hover {
+  background: var(--color-hover);
+}
+
+.tabActive {
+  background: var(--color-selected);
+  color: var(--color-title);
+}
+
+.editor {
+  flex: 1;
+  margin: 0 14px 14px;
+  padding: 8px;
+  background: var(--bg-input);
+  color: var(--color-text);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+
+.treePlaceholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--leaf-null);
+}
+
+
+.menuWrap {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 160px;
+  background: var(--bg-titlebar);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.menu > div {
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.menu > div:hover {
+  background: var(--color-hover);
+  color: var(--color-accent);
+}
