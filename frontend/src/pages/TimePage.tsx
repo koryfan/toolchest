@@ -1,30 +1,31 @@
-import {useRef, useState} from 'react';
-import {TimeService} from '../../bindings/tool-dev/internal/services';
-import type {ParseResult} from '../../bindings/tool-dev/internal/transform/models';
-import {useNotice} from '../components/Notice';
+import {useState} from 'react';
+import {invoke} from '../actions';
+import {useToolContent, useStore} from '../store';
+import {showSuccess, showError} from '../components/Notice';
 import styles from './TimePage.module.css';
 
 // 时间戳工具页：输入时间戳（秒/毫秒）或日期字符串 → 多格式结果。
-// 解析走 Go 后端（internal/transform.TimeParser）。
-// 工具栏「当前时间戳」填充当前秒级时间戳。
+// 输入行读写走 store（'time'）；解析走 Invoke('parse')（结果在 Result.Data）；
+// 工具栏「当前时间戳」为 Go 下发按钮，结果 Content 回写输入行（store）。
 
-export function TimeActions() {
-  return (
-    <div className="toolbar-actions">
-      <button onClick={() => window.dispatchEvent(new CustomEvent('time:now'))}>当前时间戳</button>
-    </div>
-  );
+// 解析结果（Invoke 返回的 Result.Data 字段）
+interface TimeData {
+  localTime?: string;
+  utcTime?: string;
+  relativeTime?: string;
+  weekday?: string;
+  unixSecond?: string;
+  unixMilli?: string;
 }
 
 // 结果行：label + 值 + 点击复制
 function ResultRow({label, value}: { label: string; value: string }) {
-  const notice = useNotice();
   if (!value) return null;
   return (
     <div className={styles.row} onClick={() => {
       navigator.clipboard.writeText(value).then(
-        () => notice.showSuccess(`已复制: ${value.length > 40 ? value.slice(0, 40) + '…' : value}`),
-        () => notice.showError('复制失败'));
+        () => showSuccess(`已复制: ${value.length > 40 ? value.slice(0, 40) + '…' : value}`),
+        () => showError('复制失败'));
     }}>
       <span className={styles.label}>{label}</span>
       <span className={styles.value}>{value}</span>
@@ -33,33 +34,19 @@ function ResultRow({label, value}: { label: string; value: string }) {
 }
 
 export default function TimePage() {
-  const [input, setInput] = useState('');
-  const [result, setResult] = useState<ParseResult | null>(null);
-  const notice = useNotice();
+  const input = useToolContent('time');
+  const setContent = useStore(s => s.setContent);
+  const [result, setResult] = useState<TimeData | null>(null);
 
+  // 「当前时间戳」按钮结果 Content 回写输入行；需要自动触发解析——
+  // 订阅输入变化（由 replaceContent 产生）即触发解析。
+  // 用户手动输入则保留现状：回车/点击「解析」触发。
   const parse = (text: string) => {
-    if (!text.trim()) { notice.showError('请输入时间戳或日期'); return; }
-    TimeService.Parse(text.trim()).then(r => {
-      if (r.Error) {
-        setResult(null);
-        notice.showError(r.Error);
-      } else {
-        setResult(r);
-      }
-    }).catch(e => notice.showError(String(e)));
+    if (!text.trim()) { setResult(null); showError('请输入时间戳或日期'); return; }
+    void invoke('time', 'parse').then(r => {
+      setResult(r.isError ? null : (r.data as TimeData) ?? null);
+    });
   };
-
-  // 工具栏「当前时间戳」按钮经事件总线联动（组件不在同一树，同 JsonPage 模式）
-  const handlersRef = useRef({now: () => {}});
-  handlersRef.current.now = () => {
-    const ts = String(Math.floor(Date.now() / 1000));
-    setInput(ts);
-    parse(ts);
-  };
-  if (!(window as any).__timeHandlersBound) {
-    (window as any).__timeHandlersBound = true;
-    window.addEventListener('time:now', () => handlersRef.current.now());
-  }
 
   return (
     <div className={styles.page}>
@@ -68,7 +55,7 @@ export default function TimePage() {
           className={styles.input}
           value={input}
           placeholder="秒/毫秒时间戳或日期字符串，如 1720000000、1720000000000、2024-07-03 15:30:00"
-          onChange={e => setInput(e.target.value)}
+          onChange={e => setContent('time', e.target.value)}
           onKeyDown={e => { if (e.key === 'Enter') parse(input); }}
           spellCheck={false}
         />
@@ -76,12 +63,12 @@ export default function TimePage() {
       </div>
       {result && (
         <div className={styles.results}>
-          <ResultRow label="本地时间" value={result.LocalTime}/>
-          <ResultRow label="UTC 时间" value={result.UTCTime}/>
-          <ResultRow label="相对时间" value={result.RelativeTime}/>
-          <ResultRow label="星期" value={result.Weekday}/>
-          <ResultRow label="Unix 秒" value={result.UnixSecond}/>
-          <ResultRow label="Unix 毫秒" value={result.UnixMilli}/>
+          <ResultRow label="本地时间" value={result.localTime ?? ''}/>
+          <ResultRow label="UTC 时间" value={result.utcTime ?? ''}/>
+          <ResultRow label="相对时间" value={result.relativeTime ?? ''}/>
+          <ResultRow label="星期" value={result.weekday ?? ''}/>
+          <ResultRow label="Unix 秒" value={result.unixSecond ?? ''}/>
+          <ResultRow label="Unix 毫秒" value={result.unixMilli ?? ''}/>
         </div>
       )}
     </div>

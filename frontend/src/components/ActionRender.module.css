@@ -1,0 +1,30 @@
+/* 操作区渲染器样式：menuWrap/menu 与 JsonPage 旧版视觉一致，
+   selected 为 radio 当前项高亮（accent 文字色） */
+.menuWrap {
+  position: relative;
+}
+.menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  min-width: 160px;
+  background: var(--bg-titlebar);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.menu > div {
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.menu > div:hover {
+  background: var(--color-hover);
+  color: var(--color-accent);
+}
+.selected {
+  color: var(--color-accent);
+}

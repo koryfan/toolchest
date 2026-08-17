@@ -27,8 +27,6 @@ func main() {
 		Name:        "tool-dev",
 		Description: "开发者自用工具集",
 		Services: []application.Service{
-			application.NewService(&services.JSONService{}),
-			application.NewService(&services.TimeService{}),
 			application.NewService(services.NewAppService(cfg)),
 		},
 		Assets: application.AssetOptions{

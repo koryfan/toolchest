@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="tool-dev app icon">
+  <defs>
+    <clipPath id="icon-clip">
+      <rect x="0" y="0" width="512" height="512" rx="112" ry="112"/>
+    </clipPath>
+    <linearGradient id="gloss" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base rounded square -->
+  <g clip-path="url(#icon-clip)">
+    <!-- Deep blue-purple background (hue 230) -->
+    <rect x="0" y="0" width="512" height="512" fill="#1b2147"/>
+    <!-- Subtle top gloss for minimal depth -->
+    <rect x="0" y="0" width="512" height="260" fill="url(#gloss)"/>
+  </g>
+
+  <!-- Central symbol: code brackets { } with lightning bolt -->
+  <g fill="none" stroke="#3ddc84" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Left curly bracket { -->
+    <path d="M 176 128
+             C 140 128, 128 144, 128 176
+             L 128 224
+             C 128 240, 118 252, 100 256
+             C 118 260, 128 272, 128 288
+             L 128 336
+             C 128 368, 140 384, 176 384"/>
+    <!-- Right curly bracket } -->
+    <path d="M 336 128
+             C 372 128, 384 144, 384 176
+             L 384 224
+             C 384 240, 394 252, 412 256
+             C 394 260, 384 272, 384 288
+             L 384 336
+             C 384 368, 372 384, 336 384"/>
+  </g>
+
+  <!-- Lightning bolt (filled, bright green accent) -->
+  <path d="M 272 168
+           L 216 272
+           L 252 272
+           L 232 352
+           L 304 240
+           L 268 240
+           Z"
+        fill="#3ddc84"/>
+
+  <!-- Thin inner border for crispness -->
+  <rect x="4" y="4" width="504" height="504" rx="108" ry="108"
+        fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="2"/>
+</svg>

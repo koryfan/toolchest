@@ -1,52 +1,78 @@
-import {useState} from 'react';
+import {useEffect, type ComponentType} from 'react';
+import {Tools} from '../bindings/tool-dev/internal/services/appservice';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import {NoticeProvider} from './components/Notice';
-import JsonPage, {JsonActions} from './pages/JsonPage';
-import TimePage, {TimeActions} from './pages/TimePage';
-import type {Tool} from './types';
+import JsonPage from './pages/JsonPage';
+import TimePage from './pages/TimePage';
+import {useStore} from './store';
 import styles from './App.module.css';
 
-// 工具注册表（对应旧 Fyne 版 pages.All）：顺序 = 侧栏顺序，第一个默认激活。
-// 新增工具：pages/ 加页面 + 这里加一行。
-const tools: Tool[] = [
-  {
-    id: 'json',
-    title: 'JSON 工具',
-    icon: sel => sel ? '/icons/code-white.svg' : '/icons/code-gray.svg',
-    toolbarActions: JsonActions,
-    content: JsonPage,
-  },
-  {
-    id: 'time',
-    title: '时间戳转换',
-    icon: sel => sel ? '/icons/clock-white.svg' : '/icons/clock-gray.svg',
-    toolbarActions: TimeActions,
-    content: TimePage,
-  },
-];
+// 内容区注册表：Go 下发的 Meta.ContentType → 前端组件。
+// 纯 UI 形态在前端定（CodeMirror/树/输入行无法配置化），
+// 配置/操作/内容全部来自 Go。新增工具：Go 侧加包 + 注册表加一行 +
+// （仅当有新内容形态时）这里加一行映射。
+const contentRegistry: Record<string, ComponentType> = {
+  json: JsonPage,
+  time: TimePage,
+};
+
+// 图标名 → SVG URL（Meta.Icon 下发的是图标名）
+const iconUrls: Record<string, [white: string, gray: string]> = {
+  json: ['/icons/code-white.svg', '/icons/code-gray.svg'],
+  time: ['/icons/clock-white.svg', '/icons/clock-gray.svg'],
+};
 
 function App() {
-  const [activeId, setActiveId] = useState(tools[0].id);
-  const active = tools.find(t => t.id === activeId)!;
-  const Actions = active.toolbarActions;
-  const Content = active.content;
+  const descs = useStore(s => s.descs);
+  const activeId = useStore(s => s.activeId);
+  const setDescs = useStore(s => s.setDescs);
+  const setActiveId = useStore(s => s.setActiveId);
+  const flush = useStore(s => s.flush);
+
+  // 启动拉取工具配置（Go 唯一权威）
+  useEffect(() => {
+    void Tools().then(list => {
+      if (list && list.length > 0) {
+        setDescs(list);
+        for (const d of list) {
+          useStore.getState().setActions(d.meta.id, d.actions ?? []);
+        }
+        setActiveId(list[0].meta.id);
+      }
+    });
+  }, [setDescs, setActiveId]);
+
+  const active = descs.find(d => d.meta.id === activeId);
+  const actions = useStore(s => s.actions[activeId]) ?? active?.actions ?? [];
+  const Content = contentRegistry[active?.meta.contentType ?? ''];
 
   return (
     <NoticeProvider>
       <div className={styles.root}>
         <Sidebar
-          icons={tools.map(t => ({
-            key: t.id,
-            url: t.icon(t.id === activeId),
-            title: t.title,
-            selected: t.id === activeId,
-            onClick: () => setActiveId(t.id),
+          icons={descs.map(d => ({
+            key: d.meta.id,
+            url: (iconUrls[d.meta.icon] ?? ['', ''])[d.meta.id === activeId ? 0 : 1],
+            title: d.meta.title,
+            selected: d.meta.id === activeId,
+            onClick: () => {
+              flush(activeId); // 切走前把 pending 镜像推给 Go
+              setActiveId(d.meta.id);
+            },
           }))}
         />
         <div className={styles.main}>
-          <Toolbar title={active.title} actions={<Actions/>}/>
-          <Content/>
+          {active && (
+            <>
+              <Toolbar
+                title={active.meta.title}
+                toolID={active.meta.id}
+                actions={actions}
+              />
+              {Content && <Content/>}
+            </>
+          )}
         </div>
       </div>
     </NoticeProvider>

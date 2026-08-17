@@ -29,6 +29,31 @@ tasks:
     cmds:
       - task: "{{.GOOS}}:package"
 
+  install:
+    summary: 构建并安装到用户目录（~/.local/bin + 桌面图标 + .desktop，无需 sudo）
+    deps: [build:frontend]
+    cmds:
+      - go build -o bin/tool-dev .
+      - install -Dm755 bin/tool-dev ~/.local/bin/tool-dev
+      - install -Dm644 assets/icon.svg ~/.local/share/icons/hicolor/scalable/apps/tool-dev.svg
+      - install -Dm644 packaging/tool-dev.desktop ~/.local/share/applications/tool-dev.desktop
+      - gtk-update-icon-cache ~/.local/share/icons/hicolor/ || true
+      - echo "已安装：~/.local/bin/tool-dev + 桌面图标"
+
+  uninstall:
+    summary: 卸载用户安装（二进制 + 图标 + .desktop）
+    cmds:
+      - rm -f ~/.local/bin/tool-dev
+      - rm -f ~/.local/share/icons/hicolor/scalable/apps/tool-dev.svg
+      - rm -f ~/.local/share/applications/tool-dev.desktop
+      - gtk-update-icon-cache ~/.local/share/icons/hicolor/ || true
+
+  build:frontend:
+    summary: 构建前端（Go embed 需要 dist）
+    dir: frontend
+    cmds:
+      - npm run build
+
   run:
     summary: Runs the application
     cmds:
