@@ -1,4 +1,4 @@
-package tools
+package toolset
 
 import "testing"
 
@@ -32,12 +32,15 @@ func TestAllToolsOpsImplemented(t *testing.T) {
 }
 
 func TestFindAndInit(t *testing.T) {
-	// json/time 断言在 Task 3/4 注册后启用
+	if Find("json") == nil || Find("time") == nil {
+		t.Fatalf("json/time 工具应已注册")
+	}
 	if Find("nope") != nil {
 		t.Fatalf("未知 ID 应返回 nil")
 	}
 	Init(map[string]map[string]any{"json": {"indent": "\t"}})
-	if snap := Snapshot(); snap == nil {
-		t.Fatalf("Snapshot 不应为 nil")
+	snap := Snapshot()
+	if snap["json"] == nil || snap["time"] == nil {
+		t.Fatalf("Snapshot 应覆盖全部注册工具: %#v", snap)
 	}
 }
