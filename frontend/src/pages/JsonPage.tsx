@@ -2,6 +2,7 @@ import {useRef, useState} from 'react';
 import {JSONService} from '../../bindings/tool-dev/internal/services';
 import {useNotice} from '../components/Notice';
 import JsonEditor from '../components/JsonEditor';
+import JsonTree from '../components/JsonTree';
 import styles from './JsonPage.module.css';
 
 // JSON 工具页：顶部「代码/树形」切换 + 输入区。
@@ -115,8 +116,9 @@ export default function JsonPage() {
           <JsonEditor value={input} onChange={setInput}/>
         </div>
       ) : (
-        <div className={styles.treePlaceholder}>树视图（待实现）</div>
+        <JsonTree input={input}/>
       )}
     </div>
   );
 }
+

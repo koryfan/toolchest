@@ -45,13 +45,7 @@
   min-height: 0;
 }
 
-.treePlaceholder {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--leaf-null);
-}
+
 
 
 .menuWrap {

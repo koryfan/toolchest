@@ -1,0 +1,17 @@
+.pane {
+  flex: 1;
+  margin: 0 14px 14px;
+  padding: 8px 12px;
+  background: var(--bg-input);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  overflow: auto;
+}
+
+.placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--leaf-null);
+}
