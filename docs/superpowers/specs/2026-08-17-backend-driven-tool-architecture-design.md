@@ -16,7 +16,7 @@
 明确不做（YAGNI）：
 
 - 内容区（CodeMirror 编辑器、树视图、时间戳表单）不配置化——强交互 UI 保留为前端组件，Go 只出 `contentType` 名字。
-- 输入内容（JSON 文本）不常驻 Go——操作时作为 payload 一次性传给 Go，结果带回。
+- 内容权威在 Go（同步策略 A，见决策 4）：前端是纯展示镜像，打字本地回显，debounce 推送。
 
 ## 总体架构
 
@@ -29,6 +29,7 @@ internal/config/               # 配置持久化：~/.config/tool-dev/config.jso
 internal/transform/            # 纯函数库保留不动（jsontool 调用）
 internal/services/             # 桥接层收口：只剩 Tools() 与 Invoke() 两个方法
 frontend/src/
+  store.ts                     # zustand 全局内容镜像：setContent(本地+debounce 推 Go)/replaceContent/flush
   App.tsx                      # 骨架：拉 Tools() 渲染侧栏/工具栏，内容区查 contentRegistry
   components/Toolbar.tsx       # 通用渲染器：吃 Action 配置，渲染按钮/菜单/RadioGroup
   handlers.ts                  # 前端 local handler 注册表 {clear, copy, ...}
@@ -48,7 +49,8 @@ frontend/src/
 type Tool interface {
     Meta() Meta  // ID / 标题 / 图标名 / contentType
     Actions() []Action  // 操作区配置（含当前选中态）
-    Invoke(op string, input string, arg string) Result  // 执行操作
+    Invoke(op string, arg string) Result  // 执行操作（内容权威在 Go，直接用自身副本）
+    SetContent(string)                    // 前端 debounce 推送的内容镜像同步
 }
 
 type Meta struct {
@@ -94,15 +96,21 @@ type RadioGroup struct {      // 「设置」式选项组（带选中态，选�
 - `internal/config/`：启动时读 `~/.config/tool-dev/config.json`，按工具 ID 分节；
   工具实现 `LoadState(map[string]any) / SaveState() map[string]any` 两个钩子（接口内聚或独立小接口，实施时定）。
 - Invoke 改变状态时同步写盘（写失败不阻断，toast 提示）。
+- 内容文本不入盘（重启即空，同现状）；落盘的只是设置类状态（缩进、展开层级等）。
 
 ### 调用协议（前端视角）
 
 ```
 启动 → services.Tools() → [{meta, actions}] → 渲染侧栏 + 当前工具的工具栏
-点击按钮(local="")     → services.Invoke(toolID, opID, input, "") → Result → 应用 content/notice/actions
-点击按钮(local="clear")→ handlers.clear(input) → 前端自理（复制/清空本就是 UI 层事务）
-RadioGroup 选中        → services.Invoke(toolID, opID, input, value) → 新配置 + 重新格式化内容
+编辑内容    → store.setContent（本地立即回显）→ debounce 300ms → services.UpdateContent(toolID, content)
+点击按钮(local="")     → services.Invoke(toolID, opID, arg) → Result → store.replaceContent + 应用 notice/actions
+点击按钮(local="clear")→ handlers.clear() → 前端自理（改内容也走 store.setContent）
+RadioGroup 选中        → services.Invoke(toolID, opID, value) → 新配置 + 新内容一次带回
+切换工具/关窗 → store.flush(toolID) 立即推送未同步尾巴
 ```
+
+Tool.Invoke 签名去掉 input 参数（原设计 `Invoke(op, input, arg)` → `Invoke(op, arg)`）：
+内容权威在 Go，操作直接用 Go 持有的副本计算。
 
 ## 关键决策记录
 
@@ -111,7 +119,11 @@ RadioGroup 选中        → services.Invoke(toolID, opID, input, value) → 新
 2. **侧栏工具列表也由 Go 下发**：`Meta()` 全量走 `Tools()`；加工具/改标题/调顺序只动 Go；
    前端只剩 `contentRegistry`（contentType → 组件）一个纯映射，内容形态不新增时零改动。
 3. **内容区不配置化**：CodeMirror/树/表单是 UI 形态不是工具业务知识，保留前端组件。
-4. **输入不跨桥常驻**：JSON 文本留前端，操作时一次性传给 Go。
+4. **内容权威在 Go，前端是纯展示镜像（方案 A）**：打字本地立即回显（零延迟），debounce 300ms 推
+   `UpdateContent`；操作结果 replaceContent 立即同步；切换工具/关窗 flush 兜底。丢失窗口恒定 ~300ms，
+   自用可接受。否掉的备选：B 每键同步等确认（打字有可感知延迟）；C 操作时才传（Go 平时持旧副本，
+   「掌握状态」名不副实 + 操作两次 IPC 有时序竞争 + 丢失窗口更大）。前端配 zustand 全局 store
+   （~1KB，组件零重复同步逻辑，只订阅自己工具的内容）。
 5. **持久化这次一起做**：趁状态收口一并落盘，SSH 隧道的连接配置之后直接复用。
 
 ## 现有功能的对齐清单（不退化）
@@ -128,15 +140,17 @@ RadioGroup 选中        → services.Invoke(toolID, opID, input, value) → 新
   - Invoke 分发正确：各 op 的输入→输出。
   - RadioGroup 选中返回新配置 + 新内容（缩进立即格式化）。
   - 配置存取：SaveState→LoadState 状态还原。
+  - SetContent 后 Invoke 用新副本计算（镜像同步生效）。
 - 前端：build 通过 + 手动验证清单（上节功能对齐清单逐项）。
 
 ## 分步实施（每步独立可验证，做完停下等 review）
 
 1. **Go 侧工具域**：`internal/tools/` 接口 + Action 类型 + jsontool/timetool 实现（含状态字段）+
    `internal/config/` 持久化 + services 收口成 `Tools()/Invoke()` + 单测。前端未动，Go 先立稳。
-2. **前端通用渲染器**：Toolbar 吃 Action 配置（三形态 + local handler 注册表），App 拉 `Tools()` 渲染侧栏，
+2. **前端通用渲染器 + 全局 store**：zustand store（setContent/replaceContent/flush + debounce 推送）、
+   Toolbar 吃 Action 配置（三形态 + local handler 注册表）、App 拉 `Tools()` 渲染侧栏、内容组件接 store、
    删各页面旧 Actions 组件，bindings 重新生成。
-3. **状态接线与清理**：缩进选中即生效链路换到 Invoke、展开层级进设置、删旧事件总线（json:format/time:now）、
-   持久化联调、AGENTS.md/README 更新。
+3. **状态接线与清理**：Invoke 去掉 input 参数改为 Go 副本计算、缩进选中即生效链路换到 Invoke、
+   展开层级进设置、删旧事件总线（json:format/time:now）、切换工具/关窗 flush、持久化联调、AGENTS.md/README 更新。
 
 每步验收：`npm run build` + `go build .` + `go test ./internal/... ./pkg/... .` 全绿 + 用户跑 `./tool-dev` 按清单验证。
