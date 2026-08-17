@@ -135,14 +135,14 @@ func trimEmpty(s string) bool {
 }
 
 // SaveState/LoadState 设置类状态持久化（内容不入盘）
-func (t *Tool) SaveState() map[string]any {
+func (t *Tool) SaveState() map[string]string {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return map[string]any{"indent": t.indent}
+	return map[string]string{"indent": t.indent}
 }
 
-func (t *Tool) LoadState(state map[string]any) {
-	if v, ok := state["indent"].(string); ok && v != "" {
+func (t *Tool) LoadState(state map[string]string) {
+	if v := state["indent"]; v != "" {
 		t.mu.Lock()
 		t.indent = v
 		t.mu.Unlock()

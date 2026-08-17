@@ -1,6 +1,10 @@
 package toolset
 
-import "testing"
+import (
+	"testing"
+
+	"tool-dev/internal/config"
+)
 
 // 全部注册的工具：Actions 里声明的每个非 local 操作，Invoke 必须有实现
 // （防字符串分发写错——删了实现忘删配置、或反之，测试直接红）
@@ -38,7 +42,7 @@ func TestFindAndInit(t *testing.T) {
 	if Find("nope") != nil {
 		t.Fatalf("未知 ID 应返回 nil")
 	}
-	Init(map[string]map[string]any{"json": {"indent": "\t"}})
+	Init(config.States{"json": {"indent": "\t"}})
 	snap := Snapshot()
 	if snap["json"] == nil || snap["time"] == nil {
 		t.Fatalf("Snapshot 应覆盖全部注册工具: %#v", snap)

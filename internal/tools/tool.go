@@ -3,7 +3,6 @@
 // 前端只是通用渲染器。注册表在 internal/toolset（避免实现包反向依赖本包成环）。
 package tools
 
-
 // Tool 工具契约：Meta 元信息，Actions 操作区配置（含选中态），
 // Invoke 执行操作（内容权威在工具自身，直接用持有副本计算），
 // SetContent 同步前端镜像内容，Save/LoadState 设置类状态持久化钩子。
@@ -12,8 +11,8 @@ type Tool interface {
 	Actions() []Action
 	Invoke(op string, arg string) Result
 	SetContent(s string)
-	SaveState() map[string]any
-	LoadState(state map[string]any)
+	SaveState() map[string]string
+	LoadState(state map[string]string)
 }
 
 // Meta 工具元信息（侧栏 + 工具栏渲染依据）

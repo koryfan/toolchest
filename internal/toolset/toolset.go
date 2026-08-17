@@ -3,6 +3,7 @@
 package toolset
 
 import (
+	"tool-dev/internal/config"
 	"tool-dev/internal/tools"
 	"tool-dev/internal/tools/jsontool"
 	"tool-dev/internal/tools/timetool"
@@ -27,7 +28,7 @@ func Find(id string) tools.Tool {
 }
 
 // Init 启动时灌入持久化状态
-func Init(states map[string]map[string]any) {
+func Init(states config.States) {
 	for _, t := range All() {
 		if s, ok := states[t.Meta().ID]; ok {
 			t.LoadState(s)
@@ -36,8 +37,8 @@ func Init(states map[string]map[string]any) {
 }
 
 // Snapshot 全量状态快照（持久化用）
-func Snapshot() map[string]map[string]any {
-	out := map[string]map[string]any{}
+func Snapshot() config.States {
+	out := config.States{}
 	for _, t := range All() {
 		out[t.Meta().ID] = t.SaveState()
 	}

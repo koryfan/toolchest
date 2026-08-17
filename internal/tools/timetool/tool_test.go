@@ -49,5 +49,5 @@ func TestStateless(t *testing.T) {
 	if len(tl.SaveState()) != 0 {
 		t.Fatalf("time 工具无持久化状态: %#v", tl.SaveState())
 	}
-	tl.LoadState(map[string]any{"x": 1})
+	tl.LoadState(map[string]string{"x": "1"})
 }

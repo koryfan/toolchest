@@ -10,7 +10,14 @@ import (
 
 // AppService 应用级服务：工具配置下发 + 操作转发 + 内容镜像同步。
 // 旧 JSONService/TimeService 在前端迁移完成后删除。
-type AppService struct{}
+type AppService struct {
+	cfg *config.Config
+}
+
+// NewAppService 构造（cfg 由 main 注入，唯一的落盘通道）
+func NewAppService(cfg *config.Config) *AppService {
+	return &AppService{cfg: cfg}
+}
 
 // Tools 全量工具描述（元信息 + 操作区配置）
 func (s *AppService) Tools() []tools.ToolDesc {
@@ -27,7 +34,7 @@ func (s *AppService) Invoke(toolID, op, arg string) tools.Result {
 	r := t.Invoke(op, arg)
 	// spec：改变状态时同步写盘——快照对比，没变就不写
 	if after := toolset.Snapshot(); !reflect.DeepEqual(before, after) {
-		_ = config.Save(after) // 写失败不阻断操作
+		_ = s.cfg.Save(after) // 写失败不阻断操作
 	}
 	return r
 }

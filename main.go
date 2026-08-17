@@ -18,7 +18,8 @@ var assets embed.FS
 
 func main() {
 	// 启动时加载持久化设置（缩进等）
-	if states, err := config.Load(); err == nil {
+	cfg := config.New()
+	if states, err := cfg.Load(); err == nil {
 		toolset.Init(states)
 	}
 
@@ -28,7 +29,7 @@ func main() {
 		Services: []application.Service{
 			application.NewService(&services.JSONService{}),
 			application.NewService(&services.TimeService{}),
-			application.NewService(&services.AppService{}),
+			application.NewService(services.NewAppService(cfg)),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

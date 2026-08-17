@@ -71,5 +71,5 @@ func (t *Tool) Invoke(op string, arg string) tools.Result {
 	}
 }
 
-func (t *Tool) SaveState() map[string]any { return map[string]any{} }
-func (t *Tool) LoadState(map[string]any)  {}
+func (t *Tool) SaveState() map[string]string { return map[string]string{} }
+func (t *Tool) LoadState(map[string]string)  {}
