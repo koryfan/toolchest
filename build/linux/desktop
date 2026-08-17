@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=My Product
+Comment=A tool-dev application
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/tool-dev %u
+Terminal=false
+Type=Application
+Icon=tool-dev
+Categories=Utility;
+StartupWMClass=tool-dev
+
+ 

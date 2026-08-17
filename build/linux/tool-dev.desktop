@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=tool-dev
+Exec=tool-dev
+Icon=tool-dev
+Categories=Development;
+Terminal=false
+Keywords=wails
+Version=1.0
+StartupNotify=false
