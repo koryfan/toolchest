@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"tool-dev/internal/config"
+	"tool-dev/internal/domain"
 )
 
 // 全部注册的工具：Actions 里声明的每个非 local 操作，Invoke 必须有实现
@@ -13,15 +14,15 @@ func TestAllToolsOpsImplemented(t *testing.T) {
 		for _, a := range tl.Actions() {
 			var opIDs []string
 			switch a.Type {
-			case "button":
+			case domain.ActionButton:
 				if a.Local == "" {
 					opIDs = append(opIDs, a.ID)
 				}
-			case "menu":
+			case domain.ActionMenu:
 				for _, it := range a.Items {
 					opIDs = append(opIDs, it.ID)
 				}
-			case "radio":
+			case domain.ActionRadio:
 				opIDs = append(opIDs, a.ID) // radio 选中即 Invoke(a.ID, value)
 			}
 			for _, op := range opIDs {

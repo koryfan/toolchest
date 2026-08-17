@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"sync"
 
-	"tool-dev/internal/tools"
+	"tool-dev/internal/domain"
 	"tool-dev/internal/transform"
 )
 
 // indentOptions 缩进选项（value 即 transform.SetIndent 的实参）
-var indentOptions = []tools.RadioOption{
+var indentOptions = []domain.RadioOption{
 	{Value: "  ", Label: "2 空格"},
 	{Value: "    ", Label: "4 空格"},
 	{Value: "\t", Label: "Tab"},
@@ -29,21 +29,21 @@ func New() *Tool {
 	return &Tool{indent: "  "}
 }
 
-func (t *Tool) Meta() tools.Meta {
-	return tools.Meta{ID: "json", Title: "JSON 工具", Icon: "json", ContentType: "json"}
+func (t *Tool) Meta() domain.Meta {
+	return domain.Meta{ID: "json", Title: "JSON 工具", Icon: "json", ContentType: "json"}
 }
 
 // Actions 操作区配置：清空/复制（前端自理）+ 格式化 + 设置（缩进，选中即生效）+ 更多
-func (t *Tool) Actions() []tools.Action {
+func (t *Tool) Actions() []domain.Action {
 	t.mu.Lock()
 	cur := t.indent
 	t.mu.Unlock()
-	return []tools.Action{
-		tools.NewButton("clear", "清空", "clear"),
-		tools.NewButton("copy", "复制", "copy"),
-		tools.NewButton("pretty", "格式化", ""),
-		tools.NewRadio("setIndent", "设置", indentOptions, cur),
-		tools.NewMenu("more", "更多", []tools.MenuItem{
+	return []domain.Action{
+		domain.NewButton("clear", "清空", "clear"),
+		domain.NewButton("copy", "复制", "copy"),
+		domain.NewButton("pretty", "格式化", ""),
+		domain.NewRadio("setIndent", "设置", indentOptions, cur),
+		domain.NewMenu("more", "更多", []domain.MenuItem{
 			{ID: "minify", Label: "压缩"},
 			{ID: "escape", Label: "转义"},
 			{ID: "unescape", Label: "反转义"},
@@ -61,7 +61,7 @@ func (t *Tool) SetContent(s string) {
 }
 
 // Invoke 操作分发。op 取自 Actions 配置的 ID；arg 仅 radio 类携带选中值。
-func (t *Tool) Invoke(op string, arg string) tools.Result {
+func (t *Tool) Invoke(op string, arg string) domain.Result {
 	t.mu.Lock()
 	content := t.content
 	switch op {
@@ -71,31 +71,31 @@ func (t *Tool) Invoke(op string, arg string) tools.Result {
 		// 内容不变
 	default:
 		t.mu.Unlock()
-		return tools.Result{IsError: true, Notice: "未知操作: " + op}
+		return domain.Result{IsError: true, Notice: "未知操作: " + op}
 	}
 	t.mu.Unlock()
 
 	if op == "setIndent" {
 		// 选中即生效：空内容只记录设置；有内容立即重新格式化
 		if trimEmpty(content) {
-			return tools.Result{Actions: t.Actions()}
+			return domain.Result{Actions: t.Actions()}
 		}
 		out, err := do(content, arg, "pretty")
 		if err != nil {
-			return tools.Result{IsError: true, Notice: err.Error(), Actions: t.Actions()}
+			return domain.Result{IsError: true, Notice: err.Error(), Actions: t.Actions()}
 		}
-		return tools.Result{Content: out, Notice: "格式化完成", Actions: t.Actions()}
+		return domain.Result{Content: out, Notice: "格式化完成", Actions: t.Actions()}
 	}
 
 	out, err := do(content, t.indent, op)
 	if err != nil {
-		return tools.Result{IsError: true, Notice: err.Error()}
+		return domain.Result{IsError: true, Notice: err.Error()}
 	}
 	notice := map[string]string{
 		"pretty": "格式化完成", "minify": "压缩完成", "escape": "转义完成",
 		"unescape": "反转义完成", "c2u": "中文 → Unicode 完成", "u2c": "Unicode → 中文 完成",
 	}[op]
-	return tools.Result{Content: out, Notice: notice}
+	return domain.Result{Content: out, Notice: notice}
 }
 
 // do 走 transform 纯逻辑（本层不写算法）

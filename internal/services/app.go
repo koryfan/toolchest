@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	"tool-dev/internal/config"
-	"tool-dev/internal/tools"
+	"tool-dev/internal/domain"
 	"tool-dev/internal/toolset"
 )
 
@@ -20,15 +20,15 @@ func NewAppService(cfg *config.Config) *AppService {
 }
 
 // Tools 全量工具描述（元信息 + 操作区配置）
-func (s *AppService) Tools() []tools.ToolDesc {
+func (s *AppService) Tools() []domain.ToolDesc {
 	return toolset.ToolDescs()
 }
 
 // Invoke 转发操作；状态变化时全量落盘（写失败不阻断操作）
-func (s *AppService) Invoke(toolID, op, arg string) tools.Result {
+func (s *AppService) Invoke(toolID, op, arg string) domain.Result {
 	t := toolset.Find(toolID)
 	if t == nil {
-		return tools.Result{IsError: true, Notice: "未知工具: " + toolID}
+		return domain.Result{IsError: true, Notice: "未知工具: " + toolID}
 	}
 	before := toolset.Snapshot()
 	r := t.Invoke(op, arg)

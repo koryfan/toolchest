@@ -4,21 +4,21 @@ package toolset
 
 import (
 	"tool-dev/internal/config"
-	"tool-dev/internal/tools"
-	"tool-dev/internal/tools/jsontool"
-	"tool-dev/internal/tools/timetool"
+	"tool-dev/internal/domain"
+	"tool-dev/internal/jsontool"
+	"tool-dev/internal/timetool"
 )
 
-var all = []tools.Tool{
+var all = []domain.Tool{
 	jsontool.New(),
 	timetool.New(),
 }
 
 // All 全部注册工具
-func All() []tools.Tool { return append([]tools.Tool{}, all...) }
+func All() []domain.Tool { return append([]domain.Tool{}, all...) }
 
 // Find 按工具 ID 查找
-func Find(id string) tools.Tool {
+func Find(id string) domain.Tool {
 	for _, t := range All() {
 		if t.Meta().ID == id {
 			return t
@@ -46,11 +46,11 @@ func Snapshot() config.States {
 }
 
 // ToolDescs 全量工具描述（services.Tools() 直接下发）
-func ToolDescs() []tools.ToolDesc {
+func ToolDescs() []domain.ToolDesc {
 	ts := All()
-	out := make([]tools.ToolDesc, 0, len(ts))
+	out := make([]domain.ToolDesc, 0, len(ts))
 	for _, t := range ts {
-		out = append(out, tools.ToolDesc{Meta: t.Meta(), Actions: t.Actions()})
+		out = append(out, domain.ToolDesc{Meta: t.Meta(), Actions: t.Actions()})
 	}
 	return out
 }
