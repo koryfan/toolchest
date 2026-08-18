@@ -1,6 +1,7 @@
 package toolset
 
 import (
+	"path/filepath"
 	"testing"
 
 	"tool-dev/internal/config"
@@ -37,15 +38,21 @@ func TestAllToolsOpsImplemented(t *testing.T) {
 }
 
 func TestFindAndInit(t *testing.T) {
-	if Find("json") == nil || Find("time") == nil {
-		t.Fatalf("json/time 工具应已注册")
+	cfg := config.NewAt(filepath.Join(t.TempDir(), "cfg.yaml"))
+	cfg.SetState("json", map[string]any{"indent": "\t"})
+	Init(cfg)
+
+	if Find("json") == nil || Find("time") == nil || Find("tunnel") == nil {
+		t.Fatalf("json/time/tunnel 工具应已注册")
 	}
 	if Find("nope") != nil {
 		t.Fatalf("未知 ID 应返回 nil")
 	}
-	Init(config.States{"json": {"indent": "\t"}})
-	snap := Snapshot()
-	if snap["json"] == nil || snap["time"] == nil {
-		t.Fatalf("Snapshot 应覆盖全部注册工具: %#v", snap)
+	states := States()
+	if _, ok := states["json"]; !ok {
+		t.Fatalf("States 应包含 json: %#v", states)
+	}
+	if _, ok := states["time"]; ok {
+		t.Fatalf("无状态工具不应出现在 States: %#v", states)
 	}
 }

@@ -7,12 +7,12 @@ import (
 
 const src = `{"name":"工具","age":3,"list":[1,2]}`
 
-func newTool() *Tool { t := New(); t.SetContent(src); return t }
+func newTool() *Tool { t := New(DefaultState()); t.SetContent(src); return t }
 
 func contains(s, sub string) bool { return strings.Contains(s, sub) }
 
 func TestMeta(t *testing.T) {
-	m := New().Meta()
+	m := New(DefaultState()).Meta()
 	if m.ID != "json" || m.Title != "JSON 工具" || m.Icon != "json" || m.ContentType != "json" {
 		t.Fatalf("Meta 不符: %#v", m)
 	}
@@ -75,7 +75,7 @@ func TestSetIndentReturnsActions(t *testing.T) {
 }
 
 func TestSetContentThenInvoke(t *testing.T) {
-	tl := New()
+	tl := New(DefaultState())
 	tl.SetContent("  不合法  ")
 	r := tl.Invoke("pretty", "")
 	if !r.IsError {
@@ -84,13 +84,15 @@ func TestSetContentThenInvoke(t *testing.T) {
 }
 
 func TestStateRoundtrip(t *testing.T) {
-	tl := New()
+	tl := New(DefaultState())
 	tl.Invoke("setIndent", "\t")
-	st := tl.SaveState()
-	tl2 := New()
-	tl2.LoadState(st)
-	if tl2.SaveState()["indent"] != "\t" {
-		t.Fatalf("状态还原失败: %#v", tl2.SaveState())
+	st, ok := tl.State().(State)
+	if !ok || st.Indent != "\t" {
+		t.Fatalf("状态快照不符: %#v", tl.State())
+	}
+	tl2 := New(st) // 状态经 New 注入还原
+	if tl2.State().(State).Indent != "\t" {
+		t.Fatalf("状态还原失败: %#v", tl2.State())
 	}
 	// 还原后的缩进应作用于后续格式化
 	tl2.SetContent(src)
@@ -101,7 +103,7 @@ func TestStateRoundtrip(t *testing.T) {
 }
 
 func TestUnknownOp(t *testing.T) {
-	r := New().Invoke("nope", "")
+	r := New(DefaultState()).Invoke("nope", "")
 	if !r.IsError || r.Notice != "未知操作: nope" {
 		t.Fatalf("未知操作应有明确报错: %#v", r)
 	}

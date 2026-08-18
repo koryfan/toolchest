@@ -1,5 +1,5 @@
-// Package toolset 工具注册表：列出全部内置工具（对应 Fyne 期 pages.All 模式）。
-// 契约在 internal/tools；这里只做装配。加新工具 = 建子包 + 这里加一行。
+// Package toolset 工具注册表：装配全部内置工具（config.Decode 注入各工具 State）。
+// 契约在 internal/domain；这里只做装配。加新工具 = 建子包 + 这里加一行。
 package toolset
 
 import (
@@ -7,14 +7,34 @@ import (
 	"tool-dev/internal/domain"
 	"tool-dev/internal/tools/jsontool"
 	"tool-dev/internal/tools/timetool"
+	"tool-dev/internal/tools/tunneltool"
 )
 
-var all = []domain.Tool{
-	jsontool.New(),
-	timetool.New(),
+var all []domain.Tool
+
+// Init 装配全部工具（cfg 已 Load；各节经泛型 Decode 转强类型，缺省/损坏用默认值）
+func Init(cfg *config.Config) {
+	jsState, ok := config.Decode[jsontool.State](cfg, "json")
+	if !ok {
+		jsState = jsontool.DefaultState()
+	}
+	tunState, ok := config.Decode[tunneltool.State](cfg, "tunnel")
+	if !ok {
+		tunState = tunneltool.DefaultState()
+	}
+
+	all = []domain.Tool{
+		jsontool.New(jsState),
+		timetool.New(),
+		tunneltool.New(tunState, emitTunnelUpdate),
+	}
+
+	// 容器里始终存强类型 State（保证 Save 输出结构稳定）
+	cfg.SetState("json", jsState)
+	cfg.SetState("tunnel", tunState)
 }
 
-// All 全部注册工具
+// All 全部注册工具（未 Init 时为空）
 func All() []domain.Tool { return append([]domain.Tool{}, all...) }
 
 // Find 按工具 ID 查找
@@ -27,20 +47,13 @@ func Find(id string) domain.Tool {
 	return nil
 }
 
-// Init 启动时灌入持久化状态
-func Init(states config.States) {
+// States 全量持久化状态快照（AppService 落盘对比用）
+func States() map[string]any {
+	out := map[string]any{}
 	for _, t := range All() {
-		if s, ok := states[t.Meta().ID]; ok {
-			t.LoadState(s)
+		if st := t.State(); st != nil {
+			out[t.Meta().ID] = st
 		}
-	}
-}
-
-// Snapshot 全量状态快照（持久化用）
-func Snapshot() config.States {
-	out := config.States{}
-	for _, t := range All() {
-		out[t.Meta().ID] = t.SaveState()
 	}
 	return out
 }

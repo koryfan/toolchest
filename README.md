@@ -24,6 +24,7 @@ wails3 generate bindings -clean -ts -i
 
 - **JSON 工具**：CodeMirror 代码视图（行号/折叠/缩进参考线/搜索）、树形视图、格式化/压缩/转义/反转义/中文↔Unicode；缩进设置即时生效并持久化
 - **时间戳转换**：秒/毫秒时间戳与日期字符串互转，多格式结果点击复制
+- **SSH 隧道**：本地端口转发（`ssh -L` 等价）管理——卡片列表、三种认证（密码/代理/公钥）、测试/开启/停止、掉线自动检测（事件推送 + 侧栏提醒灯）；纯 Go 实现，不依赖系统 ssh
 
 ## 目录
 
@@ -31,10 +32,10 @@ wails3 generate bindings -clean -ts -i
 main.go                  入口（装配依赖 + 启动）
 internal/
 ├── domain/              工具域核心类型（Tool 契约、Action、Result 等）
-├── tools/               工具实现（jsontool/、timetool/）
+├── tools/               工具实现（jsontool/、timetool/、tunneltool/）
 ├── toolset/             工具注册表
 ├── services/            Wails 服务层（AppService）
-├── config/              配置持久化（~/.config/tool-dev/config.yaml）
+├── config/              配置持久化（通用容器 + 泛型取用）
 └── transform/           纯转换逻辑（TimeParser）
 pkg/strutil/             通用字符串工具
 frontend/                React + TypeScript 前端（Vite）

@@ -10,6 +10,7 @@
 }
 
 .item {
+  position: relative; /* 提醒灯定位基准 */
   width: 48px;
   height: 48px;
   border: none;
@@ -27,4 +28,15 @@
 
 .selected {
   background: var(--color-selected);
+}
+
+/* 后台任务提醒灯：图标右上角小绿点 */
+.runningDot {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-accent);
 }

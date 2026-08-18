@@ -24,17 +24,20 @@ func (s *AppService) Tools() []domain.ToolDesc {
 	return toolset.ToolDescs()
 }
 
-// Invoke 转发操作；状态变化时全量落盘（写失败不阻断操作）
+// Invoke 转发操作；持久化状态变化时落盘（写失败不阻断操作）
 func (s *AppService) Invoke(toolID, op, arg string) domain.Result {
 	t := toolset.Find(toolID)
 	if t == nil {
 		return domain.Result{IsError: true, Notice: "未知工具: " + toolID}
 	}
-	before := toolset.Snapshot()
+	before := toolset.States()
 	r := t.Invoke(op, arg)
 	// spec：改变状态时同步写盘——快照对比，没变就不写
-	if after := toolset.Snapshot(); !reflect.DeepEqual(before, after) {
-		_ = s.cfg.Save(after) // 写失败不阻断操作
+	if after := toolset.States(); !reflect.DeepEqual(before, after) {
+		for id, st := range after {
+			s.cfg.SetState(id, st)
+		}
+		_ = s.cfg.Save() // 写失败不阻断操作
 	}
 	return r
 }

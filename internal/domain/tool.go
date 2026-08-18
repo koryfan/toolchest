@@ -4,14 +4,16 @@ package domain
 
 // Tool 工具契约：Meta 元信息，Actions 操作区配置（含选中态），
 // Invoke 执行操作（内容权威在工具自身，直接用持有副本计算），
-// SetContent 同步前端镜像内容，Save/LoadState 设置类状态持久化钩子。
+// SetContent 同步前端镜像内容，State 返回持久化状态结构体
+// （类型由工具包定义，config 经泛型取用/装配注入；nil = 无状态），
+// RunningInBackground 标识是否有后台任务在跑（侧栏提醒灯）。
 type Tool interface {
 	Meta() Meta
 	Actions() []Action
 	Invoke(op string, arg string) Result
 	SetContent(s string)
-	SaveState() map[string]string
-	LoadState(state map[string]string)
+	State() any
+	RunningInBackground() bool
 }
 
 // Meta 工具元信息（侧栏 + 工具栏渲染依据）
@@ -24,11 +26,11 @@ type Meta struct {
 
 // Result 操作结果：新内容 + 提示 + 变化后的操作区配置一次带回
 type Result struct {
-	Content string            `json:"content"`           // 新内容（空 = 不变）
-	Notice  string            `json:"notice"`            // 提示文案（空 = 不提示）
-	IsError bool              `json:"isError"`           // true = Notice 为错误
-	Actions []Action          `json:"actions,omitempty"` // 变化后的配置（nil = 无变化）
-	Data    map[string]string `json:"data,omitempty"`    // 多字段结果（时间戳解析等）
+	Content string   `json:"content"`           // 新内容（空 = 不变）
+	Notice  string   `json:"notice"`            // 提示文案（空 = 不提示）
+	IsError bool     `json:"isError"`           // true = Notice 为错误
+	Actions []Action `json:"actions,omitempty"` // 变化后的配置（nil = 无变化）
+	Data    any      `json:"data,omitempty"`    // 附加数据（时间戳解析多字段、隧道列表等，类型由工具定）
 }
 
 // ActionType 操作区配置形态（判别字段，bindings 友好）

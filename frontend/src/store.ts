@@ -1,8 +1,32 @@
 // 内容镜像 store：Go 是内容权威，前端本地即时更新保证输入流畅，
 // debounce 300ms 推 UpdateContent 同步镜像；op 结果经 replaceContent 即时回写。
+// 隧道数据由 Go 事件（tunnel-update）推送 + 初始 list 拉取，前端只渲染。
 import {create} from 'zustand';
-import {UpdateContent} from '../bindings/tool-dev/internal/services/appservice';
+import {Events} from '@wailsio/runtime';
+import {UpdateContent, Invoke} from '../bindings/tool-dev/internal/services/appservice';
 import type {Action, ToolDesc} from '../bindings/tool-dev/internal/domain/models';
+
+/** 隧道视图（Go tunneltool.TunnelView 经 JSON 序列化） */
+export interface TunnelView {
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  authMethod: 'password' | 'agent' | 'publickey';
+  password?: string;
+  keyPath?: string;
+  localHost: string;
+  localPort: number;
+  remoteHost: string;
+  remotePort: number;
+  status: 'stopped' | 'running' | 'error';
+  errMsg?: string;
+}
+
+export interface TunnelData {
+  tunnels: TunnelView[];
+  running: number;
+}
 
 const DEBOUNCE_MS = 300;
 
@@ -19,7 +43,14 @@ interface AppState {
   actions: Record<string, Action[]>;
   /** 工具元信息列表（Tools() 下发，侧栏渲染依据） */
   descs: ToolDesc[];
+  /** 隧道列表（事件推送 + 初始 list） */
+  tunnelData: TunnelData;
+  /** 隧道编辑弹窗（null = 关闭） */
+  tunnelDialog: {editing: TunnelView | null} | null;
   setContent: (toolID: string, content: string) => void;
+  setTunnelData: (d: TunnelData) => void;
+  openTunnelDialog: (editing: TunnelView | null) => void;
+  closeTunnelDialog: () => void;
   replaceContent: (toolID: string, content: string) => void;
   flush: (toolID: string) => void;
   setActions: (toolID: string, actions: Action[]) => void;
@@ -42,6 +73,8 @@ export const useStore = create<AppState>((set, get) => ({
   activeId: 'json',
   actions: {},
   descs: [],
+  tunnelData: {tunnels: [], running: 0},
+  tunnelDialog: null,
 
   setContent: (toolID, content) => {
     set(s => ({
@@ -85,6 +118,18 @@ export const useStore = create<AppState>((set, get) => ({
     set({descs});
   },
 
+  setTunnelData: d => {
+    set({tunnelData: d});
+  },
+
+  openTunnelDialog: editing => {
+    set({tunnelDialog: {editing}});
+  },
+
+  closeTunnelDialog: () => {
+    set({tunnelDialog: null});
+  },
+
   setActiveId: id => {
     set({activeId: id});
   },
@@ -93,4 +138,29 @@ export const useStore = create<AppState>((set, get) => ({
 /** 订阅某工具的内容（页面编辑器 value 数据源） */
 export function useToolContent(toolID: string): string {
   return useStore(s => s.tools[toolID]?.content ?? '');
+}
+
+// ---- 隧道事件订阅（模块级初始化一次） ----
+
+let tunnelEventsBound = false;
+
+export function initTunnelEvents(): void {
+  if (tunnelEventsBound) return;
+  tunnelEventsBound = true;
+  Events.On('tunnel-update', ev => {
+    const data = ev.data as unknown as TunnelData;
+    if (data && Array.isArray(data.tunnels)) {
+      useStore.getState().setTunnelData(data);
+    }
+  });
+  // 初始拉取一次（事件只在状态变化时发）
+  void invokeTunnelList();
+}
+
+async function invokeTunnelList(): Promise<void> {
+  const r = await Invoke('tunnel', 'list', '');
+  const data = r.data as unknown as TunnelData;
+  if (data && Array.isArray(data.tunnels)) {
+    useStore.getState().setTunnelData(data);
+  }
 }

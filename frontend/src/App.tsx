@@ -5,7 +5,8 @@ import Toolbar from './components/Toolbar';
 import {NoticeProvider} from './components/Notice';
 import JsonPage from './pages/JsonPage';
 import TimePage from './pages/TimePage';
-import {useStore} from './store';
+import TunnelPage from './pages/TunnelPage';
+import {useStore, initTunnelEvents} from './store';
 import styles from './App.module.css';
 
 // 内容区注册表：Go 下发的 Meta.ContentType → 前端组件。
@@ -15,12 +16,14 @@ import styles from './App.module.css';
 const contentRegistry: Record<string, ComponentType> = {
   json: JsonPage,
   time: TimePage,
+  tunnel: TunnelPage,
 };
 
 // 图标名 → SVG URL（Meta.Icon 下发的是图标名）
 const iconUrls: Record<string, [white: string, gray: string]> = {
   json: ['/icons/code-white.svg', '/icons/code-gray.svg'],
   time: ['/icons/clock-white.svg', '/icons/clock-gray.svg'],
+  tunnel: ['/icons/tunnel-white.svg', '/icons/tunnel-gray.svg'],
 };
 
 function App() {
@@ -30,8 +33,11 @@ function App() {
   const setActiveId = useStore(s => s.setActiveId);
   const flush = useStore(s => s.flush);
 
-  // 启动拉取工具配置（Go 唯一权威）
+  const tunnelData = useStore(s => s.tunnelData);
+
+  // 启动拉取工具配置（Go 唯一权威）+ 隧道事件订阅
   useEffect(() => {
+    initTunnelEvents();
     void Tools().then(list => {
       if (list && list.length > 0) {
         setDescs(list);
@@ -56,6 +62,7 @@ function App() {
             url: (iconUrls[d.meta.icon] ?? ['', ''])[d.meta.id === activeId ? 0 : 1],
             title: d.meta.title,
             selected: d.meta.id === activeId,
+            running: d.meta.id === 'tunnel' && tunnelData.running > 0,
             onClick: () => {
               flush(activeId); // 切走前把 pending 镜像推给 Go
               setActiveId(d.meta.id);

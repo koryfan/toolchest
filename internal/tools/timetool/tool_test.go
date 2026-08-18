@@ -19,11 +19,15 @@ func TestParseTimestamp(t *testing.T) {
 	if r.IsError {
 		t.Fatalf("解析报错: %s", r.Notice)
 	}
-	if !strings.HasPrefix(r.Data["localTime"], "2024-07-03") {
-		t.Fatalf("localTime 不符: %q", r.Data["localTime"])
+	data, ok := r.Data.(map[string]string)
+	if !ok {
+		t.Fatalf("parse 结果应为 map: %#v", r.Data)
 	}
-	if r.Data["unixSecond"] != "1720000000" || r.Data["unixMilli"] != "1720000000000" {
-		t.Fatalf("时间戳往返不符: %#v", r.Data)
+	if !strings.HasPrefix(data["localTime"], "2024-07-03") {
+		t.Fatalf("localTime 不符: %q", data["localTime"])
+	}
+	if data["unixSecond"] != "1720000000" || data["unixMilli"] != "1720000000000" {
+		t.Fatalf("时间戳往返不符: %#v", data)
 	}
 }
 
@@ -46,8 +50,7 @@ func TestNow(t *testing.T) {
 func TestStateless(t *testing.T) {
 	// 无设置类状态：Save 空 map、Load 不炸即可
 	tl := New()
-	if len(tl.SaveState()) != 0 {
-		t.Fatalf("time 工具无持久化状态: %#v", tl.SaveState())
+	if tl.State() != nil {
+		t.Fatalf("time 工具无持久化状态: %#v", tl.State())
 	}
-	tl.LoadState(map[string]string{"x": "1"})
 }

@@ -1,0 +1,301 @@
+/* 隧道页：卡片网格 + 新增卡片 + 弹窗 */
+.page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.groupTitle {
+  font-size: 13px;
+  color: var(--color-text-secondary, #8a8f9f);
+  margin: 4px 0 8px;
+}
+
+/* 卡片 */
+.card {
+  border: 1px solid var(--color-divider);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--bg-input);
+  position: relative;
+}
+.cardRunning {
+  border-left: 3px solid var(--color-accent);
+}
+.cardError {
+  border-left: 3px solid var(--color-error);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.dotRunning { background: var(--color-accent); }
+.dotError { background: var(--color-error); }
+.dotStopped { background: var(--color-text-secondary, #8a8f9f); }
+
+.auth {
+  font-size: 12px;
+  color: var(--color-text-secondary, #8a8f9f);
+  flex: none;
+}
+
+.info {
+  margin: 8px 0 4px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text-secondary, #8a8f9f);
+  font-family: 'Maple Mono', monospace;
+}
+
+.forward {
+  color: var(--color-text);
+}
+
+.errMsg {
+  font-size: 12px;
+  color: var(--color-error);
+  margin-top: 4px;
+}
+
+.ops {
+  display: flex;
+  gap: 4px;
+  margin-top: 10px;
+  border-top: 1px solid var(--color-divider);
+  padding-top: 10px;
+}
+
+/* 卡片操作：纯文字 hover 绿（与工具栏一致） */
+.ops button {
+  border: none;
+  background: transparent;
+  color: var(--color-text-secondary, #8a8f9f);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+.ops button:hover {
+  color: var(--color-accent);
+  background: var(--color-hover);
+}
+.ops button.danger:hover {
+  color: var(--color-error);
+}
+.ops .spacer {
+  flex: 1;
+}
+
+/* 新增卡片 */
+.addCard {
+  border: 1px dashed var(--color-divider);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 110px;
+  color: var(--color-text-secondary, #8a8f9f);
+  font-size: 14px;
+  cursor: pointer;
+  gap: 8px;
+  background: transparent;
+  width: 100%;
+}
+.addCard:hover {
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.empty {
+  color: var(--color-text-secondary, #8a8f9f);
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+/* ---- 弹窗 ---- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+}
+
+.dialog {
+  width: 520px;
+  max-height: 86vh;
+  overflow-y: auto;
+  background: var(--bg-titlebar, #1c1e26);
+  border: 1px solid var(--color-divider);
+  border-radius: 10px;
+  padding: 20px 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.dialogTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  color: var(--color-text);
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fieldFull {
+  grid-column: 1 / -1;
+}
+
+.field label {
+  font-size: 12px;
+  color: var(--color-text-secondary, #8a8f9f);
+}
+
+.field input,
+.field select {
+  background: var(--bg-input);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  color: var(--color-text);
+  font-size: 13px;
+  padding: 6px 10px;
+  font-family: 'Maple Mono', monospace;
+  outline: none;
+}
+.field input:focus,
+.field select:focus {
+  border-color: var(--color-accent);
+}
+
+.sectionTitle {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--color-text-secondary, #8a8f9f);
+  border-top: 1px solid var(--color-divider);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+/* 认证方式自绘下拉（视觉与 field input 对齐） */
+.authSelectWrap {
+  position: relative;
+}
+.authSelect {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-input);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  color: var(--color-text);
+  font-size: 13px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+.authSelect:hover {
+  border-color: var(--color-accent);
+}
+.authSelectArrow {
+  color: var(--color-text-secondary, #8a8f9f);
+  font-size: 11px;
+}
+.authMenu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-titlebar, #1c1e26);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  padding: 4px;
+  z-index: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+.authMenu > div {
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--color-text);
+}
+.authMenu > div:hover {
+  background: var(--color-hover);
+  color: var(--color-accent);
+}
+.authMenuSelected {
+  color: var(--color-accent) !important;
+}
+
+.testResult {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  min-height: 16px;
+  margin-top: 2px;
+}
+.testOk { color: var(--color-accent); }
+.testErr { color: var(--color-error); }
+
+.dialogOps {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.dialogOps button {
+  border: 1px solid var(--color-divider);
+  background: transparent;
+  color: var(--color-text);
+  font-size: 13px;
+  padding: 6px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.dialogOps button:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+.dialogOps button.primary {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}

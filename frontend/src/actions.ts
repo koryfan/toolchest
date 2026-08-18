@@ -32,6 +32,10 @@ const localHandlers: Record<string, LocalHandler> = {
       () => showError('复制失败'),
     );
   },
+  // 打开隧道新增弹窗（editing=null 新增；编辑走页面卡片直接 openTunnelDialog）
+  tunnelNew: () => {
+    useStore.getState().openTunnelDialog(null);
+  },
 };
 
 /** 执行一个操作并统一处理 Result（内容回写/提示/配置刷新） */

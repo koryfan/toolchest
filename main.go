@@ -17,11 +17,10 @@ import (
 var assets embed.FS
 
 func main() {
-	// 启动时加载持久化设置（缩进等）
+	// 启动时加载持久化设置（缩进/隧道配置等），装配工具
 	cfg := config.New()
-	if states, err := cfg.Load(); err == nil {
-		toolset.Init(states)
-	}
+	cfg.Load()
+	toolset.Init(cfg)
 
 	app := application.New(application.Options{
 		Name:        "tool-dev",
@@ -42,7 +41,12 @@ func main() {
 		URL:              "/",
 	})
 
+	// 退出时停止全部隧道（Wails v3 beta.9 无法拦截窗口关闭，
+	// 系统标题栏 X 直接退出，此处保证资源清理）
+	defer toolset.CloseAll()
+
 	if err := app.Run(); err != nil {
+		toolset.CloseAll()
 		log.Fatal(err)
 	}
 }

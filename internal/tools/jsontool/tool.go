@@ -16,17 +16,28 @@ var indentOptions = []domain.RadioOption{
 	{Value: "\t", Label: "Tab"},
 }
 
+// State 持久化状态（config.yaml 的 json 节）
+type State struct {
+	Indent string `yaml:"indent"`
+}
+
+// DefaultState 默认 2 空格缩进
+func DefaultState() State { return State{Indent: "  "} }
+
 // Tool JSON 工具（内容镜像 + 缩进设置状态 + 操作回调表）
 type Tool struct {
 	mu       sync.Mutex
 	content  string
-	indent   string
+	state    State
 	handlers map[string]domain.OpHandler
 }
 
-// New 创建（默认 2 空格缩进）
-func New() *Tool {
-	t := &Tool{indent: "  "}
+// New 创建（state 由装配层经 config.Decode 注入，零值降级为默认）
+func New(st State) *Tool {
+	if st.Indent == "" {
+		st = DefaultState()
+	}
+	t := &Tool{state: st}
 	t.handlers = map[string]domain.OpHandler{
 		"setIndent": t.opSetIndent, // 选中即生效：改状态 + 立即重格式化
 		"pretty":    t.opPretty,
@@ -53,7 +64,7 @@ func (t *Tool) Actions() []domain.Action {
 
 // actions 内部无锁版（调用方须持有 t.mu；Invoke 在锁内回调场景用）
 func (t *Tool) actions() []domain.Action {
-	cur := t.indent
+	cur := t.state.Indent
 	return []domain.Action{
 		domain.NewButton("clear", "清空", "clear"),
 		domain.NewButton("copy", "复制", "copy"),
@@ -90,7 +101,7 @@ func (t *Tool) Invoke(op string, arg string) domain.Result {
 // --- 操作回调（锁内执行，可直接读写 t.content/t.indent） ---
 
 func (t *Tool) opSetIndent(arg string) domain.Result {
-	t.indent = arg
+	t.state.Indent = arg
 	if trimEmpty(t.content) {
 		return domain.Result{Actions: t.actions()}
 	}
@@ -102,27 +113,27 @@ func (t *Tool) opSetIndent(arg string) domain.Result {
 }
 
 func (t *Tool) opPretty(arg string) domain.Result {
-	return runTransform(t.content, t.indent, "pretty")
+	return runTransform(t.content, t.state.Indent, "pretty")
 }
 
 func (t *Tool) opMinify(arg string) domain.Result {
-	return runTransform(t.content, t.indent, "minify")
+	return runTransform(t.content, t.state.Indent, "minify")
 }
 
 func (t *Tool) opEscape(arg string) domain.Result {
-	return runTransform(t.content, t.indent, "escape")
+	return runTransform(t.content, t.state.Indent, "escape")
 }
 
 func (t *Tool) opUnescape(arg string) domain.Result {
-	return runTransform(t.content, t.indent, "unescape")
+	return runTransform(t.content, t.state.Indent, "unescape")
 }
 
 func (t *Tool) opChineseToUnicode(arg string) domain.Result {
-	return runTransform(t.content, t.indent, "c2u")
+	return runTransform(t.content, t.state.Indent, "c2u")
 }
 
 func (t *Tool) opUnicodeToChinese(arg string) domain.Result {
-	return runTransform(t.content, t.indent, "u2c")
+	return runTransform(t.content, t.state.Indent, "u2c")
 }
 
 // runTransform 按操作名走本包的转换纯函数，结果统一包成 Result
@@ -164,17 +175,12 @@ func trimEmpty(s string) bool {
 	return true
 }
 
-// SaveState/LoadState 设置类状态持久化（内容不入盘）
-func (t *Tool) SaveState() map[string]string {
+// State 持久化状态快照（内容不入盘）
+func (t *Tool) State() any {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	return map[string]string{"indent": t.indent}
+	return t.state
 }
 
-func (t *Tool) LoadState(state map[string]string) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if v := state["indent"]; v != "" {
-		t.indent = v
-	}
-}
+// RunningInBackground JSON 工具无后台任务
+func (t *Tool) RunningInBackground() bool { return false }

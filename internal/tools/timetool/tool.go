@@ -85,5 +85,8 @@ func (t *Tool) opParse(arg string) domain.Result {
 	}}
 }
 
-func (t *Tool) SaveState() map[string]string { return map[string]string{} }
-func (t *Tool) LoadState(map[string]string)  {}
+// State 无持久化状态
+func (t *Tool) State() any { return nil }
+
+// RunningInBackground 无后台任务
+func (t *Tool) RunningInBackground() bool { return false }
