@@ -38,6 +38,16 @@ frontend/src/
 
 依赖方向：main → toolset/services → tools/* → domain + transform；前端只依赖 bindings 生成的类型与 AppService 三方法 + @wailsio/runtime 事件。
 
+## 常用命令
+
+- 构建：`go build .`（**不要 `./...`**，会扫到模板平台目录报错）
+- 测试：`go test ./internal/... ./pkg/... .`
+- 前端构建：`cd frontend && npm run build`
+- bindings 再生成：`wails3 generate bindings -clean -ts -i`（仓库根目录，改 Go 服务/类型后必跑）
+- 安装到本机：`task install`（构建前端 + 二进制 + ~/.local/bin + 桌面图标，无需 sudo）
+- 卸载：`task uninstall`
+- 开发模式：`wails3 dev` 或 `task dev`
+
 ## 关键约定
 
 - **加新工具**：internal/tools/ 下建子包（定义自己的 State + handlers 回调表，实现 domain.Tool）+ toolset.Init 注册一行 + config 无需改（通用容器）+ 前端 contentRegistry 加一行映射（仅当有新内容形态）+ icon 映射一行
@@ -57,8 +67,6 @@ frontend/src/
 - JSON 工具（CodeMirror 代码视图：行号/折叠/缩进参考线/VS Code 风格搜索；树形视图 @uiw/react-json-view；格式化/压缩/转义/中 U 互转，缩进选中即重格式化并持久化）
 - 时间戳工具（多格式解析结果、当前时间戳）
 - 后端驱动架构（spec 见 docs/superpowers/specs/，三步实施全部完成）
-
-已完成：
 - SSH 隧道工具（列表卡片/分组、新增编辑弹窗、认证三式、开启停止测试删除、掉线检测事件推送、侧栏提醒灯、配置落 config.yaml tunnel 节）
 - config 泛型容器重构（map[string]string → 强类型 State + config.Decode[T]）
 

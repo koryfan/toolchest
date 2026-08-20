@@ -5,6 +5,7 @@ package toolset
 import (
 	"tool-dev/internal/config"
 	"tool-dev/internal/domain"
+	"tool-dev/internal/tools/dbeavertool"
 	"tool-dev/internal/tools/jsontool"
 	"tool-dev/internal/tools/timetool"
 	"tool-dev/internal/tools/tunneltool"
@@ -22,16 +23,22 @@ func Init(cfg *config.Config) {
 	if !ok {
 		tunState = tunneltool.DefaultState()
 	}
+	dbState, ok := config.Decode[dbeavertool.State](cfg, "dbeaver")
+	if !ok {
+		dbState = dbeavertool.DefaultState()
+	}
 
 	all = []domain.Tool{
 		jsontool.New(jsState),
 		timetool.New(),
 		tunneltool.New(tunState, emitTunnelUpdate),
+		dbeavertool.New(dbState),
 	}
 
 	// 容器里始终存强类型 State（保证 Save 输出结构稳定）
 	cfg.SetState("json", jsState)
 	cfg.SetState("tunnel", tunState)
+	cfg.SetState("dbeaver", dbState)
 }
 
 // All 全部注册工具（未 Init 时为空）

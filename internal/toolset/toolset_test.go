@@ -42,8 +42,8 @@ func TestFindAndInit(t *testing.T) {
 	cfg.SetState("json", map[string]any{"indent": "\t"})
 	Init(cfg)
 
-	if Find("json") == nil || Find("time") == nil || Find("tunnel") == nil {
-		t.Fatalf("json/time/tunnel 工具应已注册")
+	if Find("json") == nil || Find("time") == nil || Find("tunnel") == nil || Find("dbeaver") == nil {
+		t.Fatalf("json/time/tunnel/dbeaver 工具应已注册")
 	}
 	if Find("nope") != nil {
 		t.Fatalf("未知 ID 应返回 nil")

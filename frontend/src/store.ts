@@ -28,6 +28,15 @@ export interface TunnelData {
   running: number;
 }
 
+/** DBeaver 凭据条目（Go dbeavertool.CredentialEntry） */
+export interface DbeaverEntry {
+  id: string;
+  name: string;
+  driver: string;
+  host: string;
+  keys: Record<string, string>;
+}
+
 const DEBOUNCE_MS = 300;
 
 interface ToolState {
@@ -47,10 +56,13 @@ interface AppState {
   tunnelData: TunnelData;
   /** 隧道编辑弹窗（null = 关闭） */
   tunnelDialog: {editing: TunnelView | null} | null;
+  /** DBeaver 凭据列表（null = 尚未打开过目录） */
+  dbeaverEntries: DbeaverEntry[] | null;
   setContent: (toolID: string, content: string) => void;
   setTunnelData: (d: TunnelData) => void;
   openTunnelDialog: (editing: TunnelView | null) => void;
   closeTunnelDialog: () => void;
+  setDbeaverEntries: (entries: DbeaverEntry[] | null) => void;
   replaceContent: (toolID: string, content: string) => void;
   flush: (toolID: string) => void;
   setActions: (toolID: string, actions: Action[]) => void;
@@ -75,6 +87,7 @@ export const useStore = create<AppState>((set, get) => ({
   descs: [],
   tunnelData: {tunnels: [], running: 0},
   tunnelDialog: null,
+  dbeaverEntries: null,
 
   setContent: (toolID, content) => {
     set(s => ({
@@ -130,6 +143,10 @@ export const useStore = create<AppState>((set, get) => ({
     set({tunnelDialog: null});
   },
 
+  setDbeaverEntries: entries => {
+    set({dbeaverEntries: entries});
+  },
+
   setActiveId: id => {
     set({activeId: id});
   },
@@ -155,6 +172,13 @@ export function initTunnelEvents(): void {
   });
   // 初始拉取一次（事件只在状态变化时发）
   void invokeTunnelList();
+}
+
+// DBeaver：启动时若有缓存目录（Go State.CurrentDir），refresh 恢复列表
+export function initDbeaverRestore(): void {
+  void Invoke('dbeaver', 'refresh', '').catch(() => {
+    // 无缓存目录时 Go 返回错误（尚未选择目录），静默忽略
+  });
 }
 
 async function invokeTunnelList(): Promise<void> {

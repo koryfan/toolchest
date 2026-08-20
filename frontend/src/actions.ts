@@ -2,7 +2,7 @@
 // Action.Local 命中的前端本地操作（清空/复制）走本文件注册表。
 import {Invoke} from '../bindings/tool-dev/internal/services/appservice';
 import type {Action, Result} from '../bindings/tool-dev/internal/domain/models';
-import {useStore} from './store';
+import {useStore, type DbeaverEntry} from './store';
 import {showSuccess, showError} from './components/Notice';
 
 /** 本地操作上下文 */
@@ -36,6 +36,11 @@ const localHandlers: Record<string, LocalHandler> = {
   tunnelNew: () => {
     useStore.getState().openTunnelDialog(null);
   },
+  // DBeaver：原生目录选择 → Invoke select
+  dbeaverPickDir: async () => {
+    const {pickDbeaverDir} = await import('./pages/DbeaverPage');
+    await pickDbeaverDir();
+  },
 };
 
 /** 执行一个操作并统一处理 Result（内容回写/提示/配置刷新） */
@@ -50,6 +55,15 @@ export async function invoke(toolID: string, op: string, arg = ''): Promise<Resu
       showError(r.notice);
     } else {
       showSuccess(r.notice);
+    }
+  }
+  if (r.data) {
+    // DBeaver 凭据列表（成功时带 entries；失败不带，保留旧列表供对照）
+    if (toolID === 'dbeaver') {
+      const data = r.data as {entries?: DbeaverEntry[]};
+      if (data.entries) {
+        store.setDbeaverEntries(data.entries);
+      }
     }
   }
   if (r.actions) {

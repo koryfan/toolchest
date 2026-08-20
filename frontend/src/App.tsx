@@ -6,7 +6,8 @@ import {NoticeProvider} from './components/Notice';
 import JsonPage from './pages/JsonPage';
 import TimePage from './pages/TimePage';
 import TunnelPage from './pages/TunnelPage';
-import {useStore, initTunnelEvents} from './store';
+import DbeaverPage from './pages/DbeaverPage';
+import {useStore, initTunnelEvents, initDbeaverRestore} from './store';
 import styles from './App.module.css';
 
 // 内容区注册表：Go 下发的 Meta.ContentType → 前端组件。
@@ -17,6 +18,7 @@ const contentRegistry: Record<string, ComponentType> = {
   json: JsonPage,
   time: TimePage,
   tunnel: TunnelPage,
+  dbeaver: DbeaverPage,
 };
 
 // 图标名 → SVG URL（Meta.Icon 下发的是图标名）
@@ -24,6 +26,7 @@ const iconUrls: Record<string, [white: string, gray: string]> = {
   json: ['/icons/code-white.svg', '/icons/code-gray.svg'],
   time: ['/icons/clock-white.svg', '/icons/clock-gray.svg'],
   tunnel: ['/icons/tunnel-white.svg', '/icons/tunnel-gray.svg'],
+  dbeaver: ['/icons/db-white.svg', '/icons/db-gray.svg'],
 };
 
 function App() {
@@ -38,6 +41,7 @@ function App() {
   // 启动拉取工具配置（Go 唯一权威）+ 隧道事件订阅
   useEffect(() => {
     initTunnelEvents();
+    initDbeaverRestore();
     void Tools().then(list => {
       if (list && list.length > 0) {
         setDescs(list);
