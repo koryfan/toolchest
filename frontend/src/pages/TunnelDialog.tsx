@@ -1,5 +1,5 @@
 import {useEffect, useRef, useState} from 'react';
-import {Invoke} from '../../bindings/tool-dev/internal/services/appservice';
+import {Invoke} from '../../bindings/toolchest/internal/services/appservice';
 import {useStore, type TunnelView} from '../store';
 import styles from './TunnelPage.module.css';
 

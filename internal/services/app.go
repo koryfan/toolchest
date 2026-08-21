@@ -3,9 +3,9 @@ package services
 import (
 	"reflect"
 
-	"tool-dev/internal/config"
-	"tool-dev/internal/domain"
-	"tool-dev/internal/toolset"
+	"toolchest/internal/config"
+	"toolchest/internal/domain"
+	"toolchest/internal/toolset"
 )
 
 // AppService 应用级服务：工具配置下发 + 操作转发 + 内容镜像同步。

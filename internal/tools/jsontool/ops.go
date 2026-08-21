@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"tool-dev/pkg/strutil"
+	"toolchest/pkg/strutil"
 )
 
 // Pretty 格式化 JSON（indent 为缩进字符，如 "  " 或 "\t"）

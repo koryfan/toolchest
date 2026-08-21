@@ -3,12 +3,12 @@
 package toolset
 
 import (
-	"tool-dev/internal/config"
-	"tool-dev/internal/domain"
-	"tool-dev/internal/tools/dbeavertool"
-	"tool-dev/internal/tools/jsontool"
-	"tool-dev/internal/tools/timetool"
-	"tool-dev/internal/tools/tunneltool"
+	"toolchest/internal/config"
+	"toolchest/internal/domain"
+	"toolchest/internal/tools/dbeavertool"
+	"toolchest/internal/tools/jsontool"
+	"toolchest/internal/tools/timetool"
+	"toolchest/internal/tools/tunneltool"
 )
 
 var all []domain.Tool

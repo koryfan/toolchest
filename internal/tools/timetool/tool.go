@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"tool-dev/internal/domain"
-	"tool-dev/internal/transform"
+	"toolchest/internal/domain"
+	"toolchest/internal/transform"
 )
 
 // Tool 时间戳工具（内容镜像即输入行；无设置类状态）

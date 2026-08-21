@@ -3,7 +3,7 @@ package toolset
 import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 
-	"tool-dev/internal/tools/tunneltool"
+	"toolchest/internal/tools/tunneltool"
 )
 
 // TunnelUpdateEvent tunnel-update 事件名（前端 Events.On 订阅）

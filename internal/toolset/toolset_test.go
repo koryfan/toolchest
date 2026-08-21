@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"tool-dev/internal/config"
-	"tool-dev/internal/domain"
+	"toolchest/internal/config"
+	"toolchest/internal/domain"
 )
 
 // 全部注册的工具：Actions 里声明的每个非 local 操作，Invoke 必须有实现

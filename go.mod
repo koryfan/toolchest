@@ -1,4 +1,4 @@
-module tool-dev
+module toolchest
 
 go 1.25.0
 

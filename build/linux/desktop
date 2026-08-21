@@ -1,13 +1,13 @@
 [Desktop Entry]
 Version=1.0
 Name=My Product
-Comment=A tool-dev application
+Comment=A toolchest application
 # The Exec line includes %u to pass the URL to the application
-Exec=/usr/local/bin/tool-dev %u
+Exec=/usr/local/bin/toolchest %u
 Terminal=false
 Type=Application
-Icon=tool-dev
+Icon=toolchest
 Categories=Utility;
-StartupWMClass=tool-dev
+StartupWMClass=toolchest
 
  

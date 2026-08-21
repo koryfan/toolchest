@@ -1,7 +1,7 @@
 version: "3"
 
 vars:
-  APP_NAME: "tool-dev"
+  APP_NAME: "toolchest"
   BIN_DIR: "bin"
   PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "npm"}}'
   VITE_PORT: "{{.WAILS_VITE_PORT | default 9245}}"
@@ -33,19 +33,20 @@ tasks:
     summary: 构建并安装到用户目录（~/.local/bin + 桌面图标 + .desktop，无需 sudo）
     deps: [build:frontend]
     cmds:
-      - go build -o bin/tool-dev .
-      - install -Dm755 bin/tool-dev ~/.local/bin/tool-dev
-      - install -Dm644 assets/icon.svg ~/.local/share/icons/hicolor/scalable/apps/org.wails.tool-dev.svg
-      - install -Dm644 packaging/org.wails.tool-dev.desktop ~/.local/share/applications/org.wails.tool-dev.desktop
+      - go build -o bin/toolchest .
+      - install -Dm755 bin/toolchest ~/.local/bin/toolchest
+      - install -Dm644 assets/icon.svg ~/.local/share/icons/hicolor/scalable/apps/org.wails.toolchest.svg
+      # Icon 用绝对路径（GNOME Shell 用户级带点 SVG theme 查找不命中，见 docs/knowledge/）
+      - sed "s|__HOME__|$HOME|" packaging/org.wails.toolchest.desktop > ~/.local/share/applications/org.wails.toolchest.desktop
       - gtk-update-icon-cache ~/.local/share/icons/hicolor/ || true
-      - echo "已安装：~/.local/bin/tool-dev + 桌面图标"
+      - echo "已安装：~/.local/bin/toolchest + 桌面图标"
 
   uninstall:
     summary: 卸载用户安装（二进制 + 图标 + .desktop）
     cmds:
-      - rm -f ~/.local/bin/tool-dev
-      - rm -f ~/.local/share/icons/hicolor/scalable/apps/org.wails.tool-dev.svg
-      - rm -f ~/.local/share/applications/org.wails.tool-dev.desktop
+      - rm -f ~/.local/bin/toolchest
+      - rm -f ~/.local/share/icons/hicolor/scalable/apps/org.wails.toolchest.svg
+      - rm -f ~/.local/share/applications/org.wails.toolchest.desktop
       - gtk-update-icon-cache ~/.local/share/icons/hicolor/ || true
 
   build:frontend:

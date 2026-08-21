@@ -1,4 +1,4 @@
-import type {Action} from '../../bindings/tool-dev/internal/domain/models';
+import type {Action} from '../../bindings/toolchest/internal/domain/models';
 import ActionRender from './ActionRender';
 import styles from './Toolbar.module.css';
 

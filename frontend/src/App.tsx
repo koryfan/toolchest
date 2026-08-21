@@ -1,5 +1,5 @@
 import {useEffect, type ComponentType} from 'react';
-import {Tools} from '../bindings/tool-dev/internal/services/appservice';
+import {Tools} from '../bindings/toolchest/internal/services/appservice';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import {NoticeProvider} from './components/Notice';

@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=tool-dev
-Exec=tool-dev
-Icon=tool-dev
+Name=toolchest
+Exec=toolchest
+Icon=toolchest
 Categories=Development;
 Terminal=false
 Keywords=wails

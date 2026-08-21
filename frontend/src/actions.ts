@@ -1,7 +1,7 @@
 // 通用操作分发：所有工具操作走 AppService.Invoke；
 // Action.Local 命中的前端本地操作（清空/复制）走本文件注册表。
-import {Invoke} from '../bindings/tool-dev/internal/services/appservice';
-import type {Action, Result} from '../bindings/tool-dev/internal/domain/models';
+import {Invoke} from '../bindings/toolchest/internal/services/appservice';
+import type {Action, Result} from '../bindings/toolchest/internal/domain/models';
 import {useStore, type DbeaverEntry} from './store';
 import {showSuccess, showError} from './components/Notice';
 

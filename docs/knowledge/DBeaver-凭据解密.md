@@ -9,7 +9,7 @@ module: internal/tools/dbeavertool
 
 ## 概述
 
-DBeaver 把数据库连接密码存在 workspace 的 `.dbeaver/credentials-config.json`，用固定 key 的 AES-128-CBC 加密（key 社区公开）。tool-dev 的 DBeaver 凭据工具用纯 Go 复刻了 openssl 解密链路，并关联同目录 `data-sources.json` 补全连接名称/驱动/主机。
+DBeaver 把数据库连接密码存在 workspace 的 `.dbeaver/credentials-config.json`，用固定 key 的 AES-128-CBC 加密（key 社区公开）。toolchest 的 DBeaver 凭据工具用纯 Go 复刻了 openssl 解密链路，并关联同目录 `data-sources.json` 补全连接名称/驱动/主机。
 
 ## 核心内容
 

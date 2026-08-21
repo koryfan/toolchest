@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"tool-dev/internal/domain"
+	"toolchest/internal/domain"
 )
 
 // Tool SSH 隧道工具：配置权威在 State（持久化），运行时在 Manager。

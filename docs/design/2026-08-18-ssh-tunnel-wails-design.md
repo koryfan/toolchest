@@ -21,7 +21,7 @@
 - 新增/编辑弹窗：完整表单（名称/主机/端口/用户名/认证三式/转发配置），「测试隧道配置」「保存隧道配置」。
 - 三种认证：密码 / 代理（agent + 默认密钥）/ 公钥（IdentityFile，支持 ~ 展开）。
 - 纯 Go 实现（`golang.org/x/crypto/ssh`），不依赖系统 ssh 二进制。
-- 配置持久化到 `~/.config/tool-dev/config.yaml` 的 tunnel 节（结构化，无字符串化）。
+- 配置持久化到 `~/.config/toolchest/config.yaml` 的 tunnel 节（结构化，无字符串化）。
 - 掉线自动检测：转发 goroutine 检测断开 → 置断开态 + 事件通知前端。
 - 退出确认：有运行中隧道时关窗口弹确认，确认后 CloseAll 再退。
 

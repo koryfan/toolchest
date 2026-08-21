@@ -3,8 +3,8 @@
 // 隧道数据由 Go 事件（tunnel-update）推送 + 初始 list 拉取，前端只渲染。
 import {create} from 'zustand';
 import {Events} from '@wailsio/runtime';
-import {UpdateContent, Invoke} from '../bindings/tool-dev/internal/services/appservice';
-import type {Action, ToolDesc} from '../bindings/tool-dev/internal/domain/models';
+import {UpdateContent, Invoke} from '../bindings/toolchest/internal/services/appservice';
+import type {Action, ToolDesc} from '../bindings/toolchest/internal/domain/models';
 
 /** 隧道视图（Go tunneltool.TunnelView 经 JSON 序列化） */
 export interface TunnelView {

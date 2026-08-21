@@ -6,7 +6,7 @@ package jsontool
 import (
 	"sync"
 
-	"tool-dev/internal/domain"
+	"toolchest/internal/domain"
 )
 
 // indentOptions 缩进选项（value 即 Pretty 的缩进实参）

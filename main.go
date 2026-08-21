@@ -6,9 +6,9 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 
-	"tool-dev/internal/config"
-	"tool-dev/internal/services"
-	"tool-dev/internal/toolset"
+	"toolchest/internal/config"
+	"toolchest/internal/services"
+	"toolchest/internal/toolset"
 )
 
 // 前端产物嵌入二进制（frontend/dist 由 npm run build 生成）
@@ -23,7 +23,7 @@ func main() {
 	toolset.Init(cfg)
 
 	app := application.New(application.Options{
-		Name:        "tool-dev",
+		Name:        "toolchest",
 		Description: "开发者自用工具集",
 		Services: []application.Service{
 			application.NewService(services.NewAppService(cfg)),
@@ -34,7 +34,7 @@ func main() {
 	})
 
 	app.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:            "tool-dev",
+		Title:            "toolchest",
 		Width:            1000,
 		Height:           700,
 		BackgroundColour: application.NewRGB(6, 7, 15),

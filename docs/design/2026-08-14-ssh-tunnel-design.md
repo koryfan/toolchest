@@ -2,7 +2,7 @@
 
 - 日期：2026-08-14
 - 状态：待评审
-- 范围：在 tool-dev 应用中新增「SSH 隧道」工具（侧栏第三项），支持以列表方式管理本地端口转发（`ssh -L` 等价）隧道，支持密码 / 代理 / 公钥三种认证，配置持久化到 `~/.config/tool-dev/settings.jsonc`。
+- 范围：在 toolchest 应用中新增「SSH 隧道」工具（侧栏第三项），支持以列表方式管理本地端口转发（`ssh -L` 等价）隧道，支持密码 / 代理 / 公钥三种认证，配置持久化到 `~/.config/toolchest/settings.jsonc`。
 
 ## 1. 目标与非目标
 
@@ -11,7 +11,7 @@
 - 卡片展示隧道名称、连接信息、认证方式标识、端口转发信息。
 - 卡片操作：开启/停止、测试、修改、更多 → 删除。
 - 新增/编辑弹窗：主机、端口、用户名、认证方式（密码/代理/公钥）、本地与远程端口转发配置，提供「测试隧道配置」「保存隧道配置」。
-- 配置读写 `~/.config/tool-dev/settings.jsonc`（JSON with Comments）。
+- 配置读写 `~/.config/toolchest/settings.jsonc`（JSON with Comments）。
 - 用 `golang.org/x/crypto/ssh` 纯 Go 实现 SSH 连接与转发，不依赖系统 `ssh` 二进制。
 
 ### 非目标
@@ -209,7 +209,7 @@ type TunnelManager struct {
 ## 8. 配置文件加载/保存（`internal/tunnel/config.go`）
 
 ### 路径
-`~/.config/tool-dev/settings.jsonc`（`~` 展开，目录不存在则创建）。
+`~/.config/toolchest/settings.jsonc`（`~` 展开，目录不存在则创建）。
 
 ### 加载
 1. 读取文件，不存在 → 返回空配置。
@@ -218,12 +218,12 @@ type TunnelManager struct {
 
 ### 保存
 - 全量重写（格式化输出，字段顺序固定，缩进 2 空格）。
-- 文件头加一段 `//` 注释说明（由 tool-dev 自动生成，请勿手动改格式之类）。
+- 文件头加一段 `//` 注释说明（由 toolchest 自动生成，请勿手动改格式之类）。
 - 注释保留策略：v1 不保留用户手写注释（全量重写），文件头注释固定。后续如需保留用户注释再增强。
 
 ### 文件格式示例
 ```jsonc
-// tool-dev SSH 隧道配置文件（由应用自动管理）
+// toolchest SSH 隧道配置文件（由应用自动管理）
 {
   "tunnels": [
     {

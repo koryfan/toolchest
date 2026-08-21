@@ -3,7 +3,7 @@ package dbeavertool
 import (
 	"sync"
 
-	"tool-dev/internal/domain"
+	"toolchest/internal/domain"
 )
 
 // Tool DBeaver 凭据查看工具（应用层）：编排领域纯函数 OpenWorkspace，

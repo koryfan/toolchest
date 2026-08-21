@@ -1,4 +1,4 @@
-# tool-dev 开发约定
+# toolchest 开发约定
 
 自用开发者工具集（Wails v3 + React + TypeScript）。架构为「后端驱动的工具配置」：Go 是配置/状态/内容的唯一权威，前端是通用渲染器。
 
@@ -20,7 +20,7 @@ internal/
 ├── toolset/               装配：Init(cfg) 注入各工具 State、events.go
 │                          （tunnel-update 事件发射）、lifecycle.go（CloseAll）
 ├── services/              Wails 服务层（AppService：Tools/Invoke/UpdateContent）
-├── config/                YAML 持久化（~/.config/tool-dev/config.yaml）：
+├── config/                YAML 持久化（~/.config/toolchest/config.yaml）：
 │                          通用容器 map[string]any + 泛型 Decode[T] 取强类型，
 │                          State 结构体由各工具包自定义（config 零感知）
 └── transform/             纯转换逻辑（现仅 time.go TimeParser）
@@ -58,7 +58,6 @@ frontend/src/
 - **Wails v3 beta.9 无窗口关闭拦截**：退出确认弹窗不可实现；退出时 main defer CloseAll 清理隧道资源
 - **包名不用下划线**（jsontool/timetool）；构建只用 `go build .`（`./...` 会扫到模板平台目录）；测试 `go test ./internal/... ./pkg/... .`
 - **bindings 再生成**：改 Go 服务/类型后跑 `wails3 generate bindings -clean -ts -i`（必须从仓库根目录跑，且带 -ts -i）；然后 frontend `npm run build`
-- **提交纪律**：用户明确说「提交」才 git commit
 - 提示 toast 用 react-hot-toast 原生默认样式（showSuccess/showError 纯函数导出，非 React 上下文可直接调）
 
 ## 进度

@@ -1,4 +1,4 @@
-// Package config 配置持久化：读写 ~/.config/tool-dev/config.yaml。
+// Package config 配置持久化：读写 ~/.config/toolchest/config.yaml。
 // 通用容器：顶层按工具 ID 分节，每节的结构（State）由各工具包定义，
 // 本包零感知——经泛型 Decode 取强类型，经 SetState 存强类型。
 // 内容文本不入盘，只存设置类状态。
@@ -17,13 +17,13 @@ type Config struct {
 	states map[string]any
 }
 
-// New 默认配置：$XDG_CONFIG_HOME/tool-dev/config.yaml
+// New 默认配置：$XDG_CONFIG_HOME/toolchest/config.yaml
 func New() *Config {
 	dir, err := os.UserConfigDir()
 	if err != nil {
 		dir = "."
 	}
-	return &Config{path: filepath.Join(dir, "tool-dev", "config.yaml"), states: map[string]any{}}
+	return &Config{path: filepath.Join(dir, "toolchest", "config.yaml"), states: map[string]any{}}
 }
 
 // NewAt 指定路径（测试用）

@@ -3,7 +3,7 @@
 // 点击统一走 runAction（本地 handler 注册表或 Invoke）。
 // 样式复用定稿视觉：.toolbar-actions 全局类 + 弹出菜单深色卡片。
 import {useEffect, useRef, useState} from 'react';
-import {ActionType, type Action} from '../../bindings/tool-dev/internal/domain/models';
+import {ActionType, type Action} from '../../bindings/toolchest/internal/domain/models';
 import {runAction} from '../actions';
 import styles from './ActionRender.module.css';
 

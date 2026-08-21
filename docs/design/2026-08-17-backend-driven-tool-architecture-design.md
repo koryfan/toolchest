@@ -25,7 +25,7 @@ internal/tools/                # 工具域：接口 + 注册表（唯一注册�
   tool.go                      # Tool 接口 + Action 配置类型 + All 注册表
   jsontool/tool.go             # JSON 工具：Meta + Actions 配置 + Invoke 分发 + 状态（缩进/展开层级）
   timetool/tool.go             # 时间戳工具：同构
-internal/config/               # 配置持久化：~/.config/tool-dev/config.json 读写
+internal/config/               # 配置持久化：~/.config/toolchest/config.json 读写
 internal/transform/            # 纯函数库保留不动（jsontool 调用）
 internal/services/             # 桥接层收口：Tools() / Invoke() / UpdateContent() 三个方法
 frontend/src/
@@ -106,7 +106,7 @@ Go 侧工具内部仍可用独立构造函数（`NewButton(...)`/`NewMenu(...)`�
 ### 状态与持久化
 
 - 各工具结构体持有自己的状态字段（单例指针，注册表 `All` 里持有）。
-- `internal/config/`：启动时读 `~/.config/tool-dev/config.json`，按工具 ID 分节；
+- `internal/config/`：启动时读 `~/.config/toolchest/config.json`，按工具 ID 分节；
   工具实现 `LoadState(map[string]any) / SaveState() map[string]any` 两个钩子（接口内聚或独立小接口，实施时定）。
 - Invoke 改变状态时同步写盘（写失败不阻断，toast 提示）。
 - 内容文本不入盘（重启即空，同现状）；落盘的只是设置类状态（缩进、展开层级等）。
@@ -166,4 +166,4 @@ Tool.Invoke 签名去掉 input 参数（原设计 `Invoke(op, input, arg)` → `
 3. **状态接线与清理**：Invoke 去掉 input 参数改为 Go 副本计算、缩进选中即生效链路换到 Invoke、
    展开层级进设置、删旧事件总线（json:format/time:now）、切换工具/关窗 flush、持久化联调、AGENTS.md/README 更新。
 
-每步验收：`npm run build` + `go build .` + `go test ./internal/... ./pkg/... .` 全绿 + 用户跑 `./tool-dev` 按清单验证。
+每步验收：`npm run build` + `go build .` + `go test ./internal/... ./pkg/... .` 全绿 + 用户跑 `./toolchest` 按清单验证。
