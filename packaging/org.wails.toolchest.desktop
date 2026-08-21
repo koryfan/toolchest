@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Tool Dev
-Comment=开发者工具集（JSON 格式化/树视图 + 时间戳转换）
-Comment[en]=Developer tools (JSON formatter/tree + timestamp converter)
+Name=Toolchest
+Comment=开发者工具箱（JSON / 时间戳 / SSH 隧道 / DBeaver 凭据）
+Comment[en]=Developer toolbox (JSON / timestamp / SSH tunnel / DBeaver credentials)
 Exec=toolchest
 Icon=__HOME__/.local/share/icons/hicolor/scalable/apps/org.wails.toolchest.svg
 Terminal=false
