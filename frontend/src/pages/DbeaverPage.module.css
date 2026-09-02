@@ -50,13 +50,22 @@
   font-family: 'Maple Mono', monospace;
 }
 
-.subId {
-  font-size: 11px;
-  color: var(--color-text-secondary, #8a8f9f);
-  margin-bottom: 8px;
-  font-family: 'Maple Mono', monospace;
-  word-break: break-all;
+/* 复制 DSN：标题行右侧 */
+.dsnBtn {
+  margin-left: auto;
+  flex: none;
+  font-size: 12px;
+  color: var(--color-accent);
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  border-radius: 4px;
+  padding: 1px 8px;
+  cursor: pointer;
 }
+.dsnBtn:hover {
+  background: var(--color-hover);
+}
+
 
 /* 键值行：点击复制 */
 .row {

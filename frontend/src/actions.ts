@@ -41,6 +41,11 @@ const localHandlers: Record<string, LocalHandler> = {
     const {pickDbeaverDir} = await import('./pages/DbeaverPage');
     await pickDbeaverDir();
   },
+  // DBeaver：原生保存对话框 → Invoke export（Go 写纯文本 DSN）
+  dbeaverExport: async () => {
+    const {exportDbeaver} = await import('./pages/DbeaverPage');
+    await exportDbeaver();
+  },
 };
 
 /** 执行一个操作并统一处理 Result（内容回写/提示/配置刷新） */
@@ -60,9 +65,9 @@ export async function invoke(toolID: string, op: string, arg = ''): Promise<Resu
   if (r.data) {
     // DBeaver 凭据列表（成功时带 entries；失败不带，保留旧列表供对照）
     if (toolID === 'dbeaver') {
-      const data = r.data as {entries?: DbeaverEntry[]};
+      const data = r.data as {entries?: DbeaverEntry[]; dir?: string};
       if (data.entries) {
-        store.setDbeaverEntries(data.entries);
+        store.setDbeaverEntries(data.entries, data.dir);
       }
     }
   }

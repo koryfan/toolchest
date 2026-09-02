@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -49,7 +50,7 @@ func TestOpenWorkspaceRoundtrip(t *testing.T) {
 		"empty-conn": {}
 	}`)
 	writeDataSources(t, dir, `{"connections": {
-		"mysql8-abc-123": {"name": "订单库", "driver": "mysql8", "configuration": {"host": "db.example.com", "port": "3306"}},
+		"mysql8-abc-123": {"name": "订单库", "driver": "mysql8", "configuration": {"host": "db.example.com", "port": "3306", "database": "shop"}},
 		"postgres-jdbc-xyz-9": {"name": "日志库", "driver": "postgres-jdbc", "configuration": {"host": "pg.example.com"}}
 	}}`)
 
@@ -63,9 +64,18 @@ func TestOpenWorkspaceRoundtrip(t *testing.T) {
 	if entries[0].ID != "mysql8-abc-123" || entries[0].Keys["user"] != "phpapi" || entries[0].Keys["password"] != "s3cret" {
 		t.Fatalf("第一条不符: %#v", entries[0])
 	}
-	// data-sources.json 元信息关联
+	// data-sources.json 元信息关联（含端口/库名/DSN 派生）
 	if entries[0].Name != "订单库" || entries[0].Driver != "mysql8" || entries[0].Host != "db.example.com" {
 		t.Fatalf("名称关联失败: %#v", entries[0])
+	}
+	if entries[0].Port != 3306 || entries[0].Database != "shop" {
+		t.Fatalf("端口/库名关联失败: %#v", entries[0])
+	}
+	if entries[0].DSN != "mysql://phpapi:s3cret@db.example.com:3306/shop" {
+		t.Fatalf("DSN 派生不符: %s", entries[0].DSN)
+	}
+	if !strings.Contains(entries[1].DSN, "postgres://postgres:pg@pg.example.com") {
+		t.Fatalf("第二条 DSN 不符: %s", entries[1].DSN)
 	}
 	if entries[1].Keys["user"] != "postgres" || entries[1].Keys["password"] != "pg" {
 		t.Fatalf("第二条不符: %#v", entries[1])
@@ -112,6 +122,9 @@ func TestToolSelectAndRefresh(t *testing.T) {
 	if !ok || len(entries) != 1 || entries[0].Keys["password"] != "p1" {
 		t.Fatalf("entries 不符: %#v", data["entries"])
 	}
+	if data["dir"] != dir {
+		t.Fatalf("Data 应带当前目录: %#v", data["dir"])
+	}
 	// 目录记忆 + Actions 下拉更新
 	st := tl.State().(State)
 	if st.CurrentDir != dir || len(st.RecentDirs) != 1 {
@@ -144,5 +157,80 @@ func TestPushRecent(t *testing.T) {
 	}
 	if s.RecentDirs[0] != "a" || len(s.RecentDirs) != 3 {
 		t.Fatalf("去重置顶不符: %#v", s.RecentDirs)
+	}
+
+}
+func TestBuildDSN(t *testing.T) {
+	cases := []struct {
+		name string
+		e    CredentialEntry
+		want string
+	}{
+		{
+			name: "mysql 全字段",
+			e:    CredentialEntry{Driver: "mysql8", Host: "10.0.0.8", Port: 3306, Database: "shop", Keys: map[string]string{"user": "u", "password": "p"}},
+			want: "mysql://u:p@10.0.0.8:3306/shop",
+		},
+		{
+			name: "密码含特殊字符需转义",
+			e:    CredentialEntry{Driver: "com_clickhouse", Host: "ch", Port: 8123, Keys: map[string]string{"user": "a:b", "password": "p@ss/w?rd"}},
+			want: "clickhouse://a%3Ab:p%40ss%2Fw%3Frd@ch:8123",
+		},
+		{
+			name: "postgres 驱动别名映射",
+			e:    CredentialEntry{Driver: "postgres-jdbc", Host: "pg", Port: 5432, Keys: map[string]string{"user": "pg"}},
+			want: "postgres://pg:@pg:5432",
+		},
+		{
+			name: "未知驱动去 com_ 原样",
+			e:    CredentialEntry{Driver: "com_enigma", Host: "h", Keys: map[string]string{"user": "u", "password": "x"}},
+			want: "enigma://u:x@h",
+		},
+		{
+			name: "无 user 不带凭据段",
+			e:    CredentialEntry{Driver: "oracle", Host: "ora", Port: 1521},
+			want: "oracle://ora:1521",
+		},
+		{
+			name: "IPv6 + 库名",
+			e:    CredentialEntry{Driver: "mysql8", Host: "::1", Port: 3306, Database: "db", Keys: map[string]string{"user": "u", "password": "p"}},
+			want: "mysql://u:p@[::1]:3306/db",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := BuildDSN(c.e); got != c.want {
+				t.Fatalf("BuildDSN = %q, want %q", got, c.want)
+			}
+		})
+	}
+}
+
+func TestToolExport(t *testing.T) {
+	dir := t.TempDir()
+	encryptFixture(t, dir, `{"c1": {"#connection": {"user": "u1", "password": "p1"}}}`)
+	writeDataSources(t, dir, `{"connections": {"c1": {"name": "n1", "driver": "mysql8", "configuration": {"host": "h1", "port": 3306, "database": "d1"}}}}`)
+
+	tl := New(DefaultState())
+	if r := tl.Invoke("select", dir); r.IsError {
+		t.Fatalf("select: %s", r.Notice)
+	}
+
+	out := filepath.Join(t.TempDir(), "dsn.txt")
+	r := tl.Invoke("export", out)
+	if r.IsError {
+		t.Fatalf("export: %s", r.Notice)
+	}
+	data, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := "# n1\nmysql://u1:p1@h1:3306/d1\n"
+	if string(data) != want {
+		t.Fatalf("导出内容不符:\n got  %q\n want %q", data, want)
+	}
+	info, _ := os.Stat(out)
+	if info.Mode().Perm() != 0o600 {
+		t.Fatalf("导出文件含密码应为 0600: %v", info.Mode())
 	}
 }

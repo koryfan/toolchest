@@ -12,6 +12,9 @@ interface CredentialEntry {
   name: string;
   driver: string;
   host: string;
+  port: number;
+  database: string;
+  dsn: string;
   keys: Record<string, string>;
 }
 
@@ -29,17 +32,35 @@ const copyValue = (key: string, value: string) => {
   );
 };
 
+/** 单条导出文本：名称注释行 + DSN 行（与 Go ExportText 同格式） */
+const entryText = (entry: CredentialEntry): string => `# ${entry.name || entry.id}\n${entry.dsn}`;
+
 function Card({entry}: { entry: CredentialEntry }) {
-  const keys = Object.keys(entry.keys).sort();
+  // user 在上、password 随后，其余键字母序
+  const order = ['user', 'password'];
+  const keys = Object.keys(entry.keys).sort((a, b) => {
+    const ia = order.indexOf(a);
+    const ib = order.indexOf(b);
+    if (ia !== -1 || ib !== -1) return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+    return a.localeCompare(b);
+  });
   const title = entry.name || entry.id;
   return (
     <div className={styles.card}>
       <div className={styles.cardTitle}>
         <span>{title}</span>
         {entry.driver && <span className={styles.driver}>{entry.driver}</span>}
-        {entry.host && <span className={styles.host}>{entry.host}</span>}
+        {entry.host && <span className={styles.host}>{entry.port ? `${entry.host}:${entry.port}` : entry.host}</span>}
+        {entry.database && <span className={styles.host}>{entry.database}</span>}
+        {entry.dsn && (
+          <button
+            className={styles.dsnBtn}
+            onClick={() => copyValue('DSN', entryText(entry))}
+          >
+            复制 DSN
+          </button>
+        )}
       </div>
-      {entry.name && <div className={styles.subId}>{entry.id}</div>}
       {keys.map(k => (
         <div key={k} className={styles.row} onClick={() => copyValue(k, entry.keys[k])}>
           <span className={styles.key}>{k}</span>
@@ -86,4 +107,23 @@ export async function pickDbeaverDir(): Promise<void> {
   const dir = Array.isArray(dirs) ? dirs[0] : dirs;
   if (!dir) return; // 取消
   await invoke('dbeaver', 'select', dir);
+}
+
+/** 工具栏「导出」本地 handler：原生保存对话框 → Invoke export（Go 写纯文本 DSN，0600） */
+export async function exportDbeaver(): Promise<void> {
+  const {dbeaverEntries: entries, dbeaverDir} = useStore.getState();
+  if (!entries?.length) {
+    showError('尚未打开目录，无以导出');
+    return;
+  }
+  // 默认文件名 = 当前工作目录 basename，如 .../ktv-new-test → ktv-new-test.txt
+  const base = dbeaverDir?.split('/').filter(Boolean).pop() || 'dbeaver-dsn';
+  const path = await Dialogs.SaveFile({
+    Title: '导出 DBeaver 连接 DSN',
+    Filename: `${base}.txt`,
+    CanCreateDirectories: true,
+    Filters: [{DisplayName: '文本文件', Pattern: '*.txt'}],
+  });
+  if (!path) return; // 取消
+  await invoke('dbeaver', 'export', path);
 }

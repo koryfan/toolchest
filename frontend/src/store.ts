@@ -34,6 +34,9 @@ export interface DbeaverEntry {
   name: string;
   driver: string;
   host: string;
+  port: number;
+  database: string;
+  dsn: string;
   keys: Record<string, string>;
 }
 
@@ -58,11 +61,13 @@ interface AppState {
   tunnelDialog: {editing: TunnelView | null} | null;
   /** DBeaver 凭据列表（null = 尚未打开过目录） */
   dbeaverEntries: DbeaverEntry[] | null;
+  /** DBeaver 当前工作目录（导出默认文件名取 basename） */
+  dbeaverDir: string | null;
   setContent: (toolID: string, content: string) => void;
   setTunnelData: (d: TunnelData) => void;
   openTunnelDialog: (editing: TunnelView | null) => void;
   closeTunnelDialog: () => void;
-  setDbeaverEntries: (entries: DbeaverEntry[] | null) => void;
+  setDbeaverEntries: (entries: DbeaverEntry[] | null, dir?: string) => void;
   replaceContent: (toolID: string, content: string) => void;
   flush: (toolID: string) => void;
   setActions: (toolID: string, actions: Action[]) => void;
@@ -88,6 +93,7 @@ export const useStore = create<AppState>((set, get) => ({
   tunnelData: {tunnels: [], running: 0},
   tunnelDialog: null,
   dbeaverEntries: null,
+  dbeaverDir: null,
 
   setContent: (toolID, content) => {
     set(s => ({
@@ -143,8 +149,8 @@ export const useStore = create<AppState>((set, get) => ({
     set({tunnelDialog: null});
   },
 
-  setDbeaverEntries: entries => {
-    set({dbeaverEntries: entries});
+  setDbeaverEntries: (entries, dir) => {
+    set({dbeaverEntries: entries, dbeaverDir: dir ?? null});
   },
 
   setActiveId: id => {

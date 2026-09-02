@@ -13,9 +13,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
+	"strings"
 )
 
 // 领域错误：调用方（应用层/前端）据此区分提示文案
@@ -36,13 +40,17 @@ var (
 )
 
 // CredentialEntry 值对象：单条连接凭据（不可变查询结果）。
-// Name/Driver/Host 来自同目录 data-sources.json（明文）按 ID 关联，缺失时回退 ID。
+// Name/Driver/Host/Port/Database 来自同目录 data-sources.json（明文）按 ID 关联，缺失时回退 ID。
+// DSN 由 BuildDSN 依据以上字段派生，随条目下发供单个复制/整体导出。
 type CredentialEntry struct {
-	ID     string            `json:"id"`     // 连接标识，如 mysql8-193ab26b9e4-2527dc101f9196b
-	Name   string            `json:"name"`   // 用户可见名称，如 "logs"
-	Driver string            `json:"driver"` // 驱动，如 mysql8 / com_clickhouse
-	Host   string            `json:"host"`   // 主机（来自 data-sources.json configuration）
-	Keys   map[string]string `json:"keys"`   // 凭据字段（user/password/...），非字符串字段不展示
+	ID       string            `json:"id"`       // 连接标识，如 mysql8-193ab26b9e4-2527dc101f9196b
+	Name     string            `json:"name"`     // 用户可见名称，如 "logs"
+	Driver   string            `json:"driver"`   // 驱动，如 mysql8 / com_clickhouse
+	Host     string            `json:"host"`     // 主机（来自 data-sources.json configuration）
+	Port     int               `json:"port"`     // 端口（0 = 未配置）
+	Database string            `json:"database"` // 数据库名（可为空）
+	DSN      string            `json:"dsn"`      // URL 风格 DSN：scheme://user:password@host:port/database
+	Keys     map[string]string `json:"keys"`     // 凭据字段（user/password/...），非字符串字段不展示
 }
 
 // Decrypt 解密 credentials-config.json 密文。
@@ -106,10 +114,11 @@ func Parse(plain []byte) ([]CredentialEntry, error) {
 
 // dataSources data-sources.json 的连接元信息（明文，非敏感）
 type dataSourceInfo struct {
-	Name        string `json:"name"`
-	Driver      string `json:"driver"`
-	Host        string `json:"host"`
-	Port        int    `json:"port"`
+	Name     string `json:"name"`
+	Driver   string `json:"driver"`
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Database string `json:"database"`
 }
 
 // readDataSourceNames 读 data-sources.json 的 id → 名称/驱动/主机 映射。
@@ -124,8 +133,9 @@ func readDataSourceNames(dir string) map[string]dataSourceInfo {
 			Name          string `json:"name"`
 			Driver        string `json:"driver"`
 			Configuration struct {
-				Host string `json:"host"`
-				Port any    `json:"port"` // 实际可能是字符串 "5432" 或数字
+				Host     string `json:"host"`
+				Port     any    `json:"port"` // 实际可能是字符串 "5432" 或数字
+				Database string `json:"database"`
 			} `json:"configuration"`
 		} `json:"connections"`
 	}
@@ -134,7 +144,7 @@ func readDataSourceNames(dir string) map[string]dataSourceInfo {
 	}
 	out := make(map[string]dataSourceInfo, len(cfg.Connections))
 	for id, c := range cfg.Connections {
-		info := dataSourceInfo{Name: c.Name, Driver: c.Driver, Host: c.Configuration.Host}
+		info := dataSourceInfo{Name: c.Name, Driver: c.Driver, Host: c.Configuration.Host, Database: c.Configuration.Database}
 		switch p := c.Configuration.Port.(type) {
 		case string:
 			fmt.Sscanf(p, "%d", &info.Port)
@@ -171,7 +181,65 @@ func OpenWorkspace(dir string) ([]CredentialEntry, error) {
 			entries[i].Name = info.Name
 			entries[i].Driver = info.Driver
 			entries[i].Host = info.Host
+			entries[i].Port = info.Port
+			entries[i].Database = info.Database
 		}
+		entries[i].DSN = BuildDSN(entries[i])
 	}
 	return entries, nil
+}
+
+// driverScheme DBeaver 驱动名 → DSN URL scheme；
+// 未识别的驱动去掉 com_ 前缀原样使用（保持可读，不强猜）。
+func driverScheme(driver string) string {
+	d := strings.TrimPrefix(driver, "com_")
+	switch {
+	case strings.HasPrefix(d, "mysql"):
+		return "mysql"
+	case d == "mariadb":
+		return "mariadb"
+	case strings.HasPrefix(d, "postgres"):
+		return "postgres"
+	case d == "clickhouse":
+		return "clickhouse"
+	case d == "mssql", strings.HasPrefix(d, "sqlserver"):
+		return "sqlserver"
+	case d == "oracle":
+		return "oracle"
+	}
+	return d
+}
+
+// BuildDSN 生成 URL 风格 DSN：scheme://user:password@host:port/database。
+// user/password 经 net/url 转义（密码含特殊字符不破坏格式）；
+// host/port/database 缺啥省啥，user 缺失时不带凭据段。
+func BuildDSN(e CredentialEntry) string {
+	u := url.URL{Scheme: driverScheme(e.Driver)}
+	if e.Host != "" || e.Port != 0 {
+		host := e.Host
+		if e.Port != 0 {
+			host = net.JoinHostPort(host, strconv.Itoa(e.Port))
+		}
+		u.Host = host
+	}
+	if e.Database != "" {
+		u.Path = "/" + strings.TrimPrefix(e.Database, "/")
+	}
+	if user := e.Keys["user"]; user != "" {
+		u.User = url.UserPassword(user, e.Keys["password"])
+	}
+	return u.String()
+}
+
+// ExportText 连接导出为纯文本：名称注释行 + DSN 行，逐条成对（单条复制与整档导出同格式）。
+func ExportText(entries []CredentialEntry) string {
+	var b strings.Builder
+	for _, e := range entries {
+		title := e.Name
+		if title == "" {
+			title = e.ID
+		}
+		fmt.Fprintf(&b, "# %s\n%s\n", title, e.DSN)
+	}
+	return b.String()
 }

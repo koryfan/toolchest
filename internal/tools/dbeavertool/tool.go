@@ -1,6 +1,8 @@
 package dbeavertool
 
 import (
+	"fmt"
+	"os"
 	"sync"
 
 	"toolchest/internal/domain"
@@ -20,6 +22,7 @@ func New(st State) *Tool {
 	t.handlers = map[string]domain.OpHandler{
 		"select":  t.opSelect,  // arg=目录：记忆 + 解密
 		"refresh": t.opRefresh, // 重解密当前目录
+		"export":  t.opExport,  // arg=文件路径：当前目录全部连接导出纯文本 DSN
 	}
 	return t
 }
@@ -46,6 +49,7 @@ func (t *Tool) Actions() []domain.Action {
 		domain.NewButton("pick", "选择目录", "dbeaverPickDir"),
 		domain.NewRadio("select", "目录", opts, current),
 		domain.NewButton("refresh", "刷新", ""),
+		domain.NewButton("export", "导出", "dbeaverExport"),
 	}
 }
 
@@ -79,7 +83,10 @@ func (t *Tool) result(entries []CredentialEntry, err error) domain.Result {
 		r.Notice = err.Error()
 		return r
 	}
-	r.Data = map[string]any{"entries": entries}
+	t.mu.Lock()
+	cur := t.state.CurrentDir
+	t.mu.Unlock()
+	r.Data = map[string]any{"entries": entries, "dir": cur} // dir 供前端推导导出默认文件名
 	return r
 }
 
@@ -104,4 +111,22 @@ func (t *Tool) opRefresh(arg string) domain.Result {
 	}
 	entries, err := OpenWorkspace(dir)
 	return t.result(entries, err)
+}
+
+// opExport 当前目录全部连接导出为纯文本 DSN 文件（含密码，0600 权限）。
+func (t *Tool) opExport(arg string) domain.Result {
+	t.mu.Lock()
+	dir := t.state.CurrentDir
+	t.mu.Unlock()
+	if dir == "" {
+		return domain.Result{IsError: true, Notice: "尚未选择目录", Actions: t.Actions()}
+	}
+	entries, err := OpenWorkspace(dir)
+	if err != nil {
+		return t.result(nil, err)
+	}
+	if err := os.WriteFile(arg, []byte(ExportText(entries)), 0o600); err != nil {
+		return domain.Result{IsError: true, Notice: "写入文件失败: " + err.Error(), Actions: t.Actions()}
+	}
+	return domain.Result{Notice: fmt.Sprintf("已导出 %d 条连接到 %s", len(entries), arg), Actions: t.Actions()}
 }
