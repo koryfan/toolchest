@@ -7,6 +7,7 @@ import JsonPage from './pages/JsonPage';
 import TimePage from './pages/TimePage';
 import TunnelPage from './pages/TunnelPage';
 import DbeaverPage from './pages/DbeaverPage';
+import UuidPage from './pages/UuidPage';
 import {useStore, initTunnelEvents, initDbeaverRestore} from './store';
 import styles from './App.module.css';
 
@@ -19,6 +20,7 @@ const contentRegistry: Record<string, ComponentType> = {
   time: TimePage,
   tunnel: TunnelPage,
   dbeaver: DbeaverPage,
+  uuid: UuidPage,
 };
 
 // 图标名 → SVG URL（Meta.Icon 下发的是图标名）
@@ -27,6 +29,7 @@ const iconUrls: Record<string, [white: string, gray: string]> = {
   time: ['/icons/clock-white.svg', '/icons/clock-gray.svg'],
   tunnel: ['/icons/tunnel-white.svg', '/icons/tunnel-gray.svg'],
   dbeaver: ['/icons/db-white.svg', '/icons/db-gray.svg'],
+  uuid: ['/icons/hash-white.svg', '/icons/hash-gray.svg'],
 };
 
 function App() {

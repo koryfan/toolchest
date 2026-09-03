@@ -9,6 +9,7 @@ import (
 	"toolchest/internal/tools/jsontool"
 	"toolchest/internal/tools/timetool"
 	"toolchest/internal/tools/tunneltool"
+	"toolchest/internal/tools/uuidtool"
 )
 
 var all []domain.Tool
@@ -27,18 +28,24 @@ func Init(cfg *config.Config) {
 	if !ok {
 		dbState = dbeavertool.DefaultState()
 	}
+	uuidState, ok := config.Decode[uuidtool.State](cfg, "uuid")
+	if !ok {
+		uuidState = uuidtool.DefaultState()
+	}
 
 	all = []domain.Tool{
 		jsontool.New(jsState),
 		timetool.New(),
 		tunneltool.New(tunState, emitTunnelUpdate),
 		dbeavertool.New(dbState),
+		uuidtool.New(uuidState),
 	}
 
 	// 容器里始终存强类型 State（保证 Save 输出结构稳定）
 	cfg.SetState("json", jsState)
 	cfg.SetState("tunnel", tunState)
 	cfg.SetState("dbeaver", dbState)
+	cfg.SetState("uuid", uuidState)
 }
 
 // All 全部注册工具（未 Init 时为空）
