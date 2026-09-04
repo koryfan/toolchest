@@ -5,7 +5,63 @@
   background: var(--bg-input);
   border: 1px solid var(--color-divider);
   border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.searchbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 0 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--color-divider);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: inherit;
+  font: inherit;
+}
+
+.searchInput::placeholder {
+  color: var(--leaf-null);
+}
+
+.hitCount {
+  flex: none;
+  font-size: 12px;
+  color: var(--leaf-info, rgb(121, 125, 134));
+}
+
+.hitCountZero {
+  composes: hitCount;
+  opacity: 0.7;
+}
+
+.treeArea {
+  flex: 1;
   overflow: auto;
+}
+
+/* 每层级缩进 = 4 个空格：库的缩进是 inline style（paddingLeft + marginLeft:6px），
+   用 4ch（等宽字体 1ch = 单字符宽）覆盖，与代码视图 4 空格缩进对齐 */
+.treeArea :global(.w-rjv-wrap) {
+  padding-left: 4ch !important;
+  margin-left: 0 !important;
+}
+
+.hit {
+  background: rgba(229, 192, 123, 0.4);   /* 柔黄，贴合暗色主题 */
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 .placeholder {
