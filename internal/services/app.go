@@ -1,7 +1,8 @@
 package services
 
 import (
-	"reflect"
+	"bytes"
+	"encoding/json"
 
 	"toolchest/internal/config"
 	"toolchest/internal/domain"
@@ -30,16 +31,28 @@ func (s *AppService) Invoke(toolID, op, arg string) domain.Result {
 	if t == nil {
 		return domain.Result{IsError: true, Notice: "未知工具: " + toolID}
 	}
-	before := toolset.States()
+	before := statesJSON()
 	r := t.Invoke(op, arg)
-	// spec：改变状态时同步写盘——快照对比，没变就不写
-	if after := toolset.States(); !reflect.DeepEqual(before, after) {
-		for id, st := range after {
+	// spec：改变状态时同步写盘——快照对比，没变就不写；SetState 必须存
+	// 强类型 State（容器里的类型决定 Save 输出结构）
+	if after := statesJSON(); !bytes.Equal(before, after) {
+		for id, st := range toolset.States() {
 			s.cfg.SetState(id, st)
 		}
 		_ = s.cfg.Save() // 写失败不阻断操作
 	}
 	return r
+}
+
+// statesJSON 状态快照（JSON 字节）。直接引用 toolset.States() 做对比
+// 会共享 slice 底层数组：工具原地替换元素（如 Tunnels[i] = cfg）时
+// before 快照跟着变，DeepEqual 恒等，落盘被跳过；序列化字节对比天然隔离。
+func statesJSON() []byte {
+	b, err := json.Marshal(toolset.States())
+	if err != nil {
+		return nil
+	}
+	return b
 }
 
 // UpdateContent 前端 debounce 推送的内容镜像同步
