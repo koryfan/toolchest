@@ -12,6 +12,8 @@ interface FormState {
   port: string;
   username: string;
   authMethod: TunnelView['authMethod'];
+  forwardMode: 'direct' | 'exec';
+  execCommand: string;
   password: string;
   keyPath: string;
   localHost: string;
@@ -21,15 +23,16 @@ interface FormState {
 }
 
 const emptyForm: FormState = {
-  name: '', host: '', port: '22', username: '', authMethod: 'agent',
-  password: '', keyPath: '', localHost: '127.0.0.1', localPort: '',
+  name: '', host: '', port: '22', username: '', authMethod: 'agent', forwardMode: 'direct',
+  execCommand: '', password: '', keyPath: '', localHost: '127.0.0.1', localPort: '',
   remoteHost: 'localhost', remotePort: '',
 };
 
 function fromTunnel(t: TunnelView): FormState {
   return {
     name: t.name, host: t.host, port: String(t.port), username: t.username,
-    authMethod: t.authMethod, password: t.password ?? '', keyPath: t.keyPath ?? '',
+    authMethod: t.authMethod, forwardMode: t.forwardMode ?? 'direct', execCommand: t.execCommand ?? '',
+    password: t.password ?? '', keyPath: t.keyPath ?? '',
     localHost: t.localHost, localPort: String(t.localPort),
     remoteHost: t.remoteHost, remotePort: String(t.remotePort),
   };
@@ -41,7 +44,7 @@ function toConfigJSON(f: FormState): string {
     host: f.host.trim(),
     port: Number(f.port) || 0,
     username: f.username.trim(),
-    authMethod: f.authMethod,
+    authMethod: f.authMethod, forwardMode: f.forwardMode, execCommand: f.execCommand.trim(),
     password: f.password,
     keyPath: f.keyPath.trim(),
     localHost: f.localHost.trim(),
@@ -59,9 +62,15 @@ const authOptions: { value: TunnelView['authMethod']; label: string }[] = [
   {value: 'password', label: '密码'},
 ];
 
-function AuthSelect({value, onChange}: {
-  value: TunnelView['authMethod'];
-  onChange: (v: TunnelView['authMethod']) => void;
+const forwardOptions: { value: 'direct' | 'exec'; label: string }[] = [
+  {value: 'direct', label: '直连转发（ssh -L）'},
+  {value: 'exec', label: 'exec 隧道（堡垒机禁用直连转发时）'},
+];
+
+function Select<T extends string>({value, onChange, options}: {
+  value: T;
+  onChange: (v: T) => void;
+  options: { value: T; label: string }[];
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -75,7 +84,7 @@ function AuthSelect({value, onChange}: {
     return () => document.removeEventListener('mousedown', onDown);
   }, [open]);
 
-  const cur = authOptions.find(o => o.value === value);
+  const cur = options.find(o => o.value === value);
 
   return (
     <div className={styles.authSelectWrap} ref={ref}>
@@ -88,7 +97,7 @@ function AuthSelect({value, onChange}: {
       </div>
       {open && (
         <div className={styles.authMenu}>
-          {authOptions.map(o => (
+          {options.map(o => (
             <div
               key={o.value}
               className={o.value === value ? styles.authMenuSelected : undefined}
@@ -195,9 +204,10 @@ export default function TunnelDialog() {
 
           <div className={styles.field}>
             <label>认证方式</label>
-            <AuthSelect
+            <Select
               value={form.authMethod}
               onChange={v => set({authMethod: v})}
+              options={authOptions}
             />
           </div>
           {form.authMethod === 'password' && (
@@ -223,7 +233,27 @@ export default function TunnelDialog() {
             </div>
           )}
 
-          <div className={styles.sectionTitle}>端口转发（ssh -L 等价）</div>
+          <div className={styles.field}>
+            <label>转发模式</label>
+            <Select
+              value={form.forwardMode}
+              onChange={v => set({forwardMode: v})}
+              options={forwardOptions}
+            />
+          </div>
+          {form.forwardMode === 'exec' && (
+            <div className={styles.field}>
+              <label>远端命令（可选）</label>
+              <input
+                value={form.execCommand}
+                placeholder="留空自动生成 nc <远程主机> <远程端口>"
+                onChange={e => set({execCommand: e.target.value})}
+                spellCheck={false}
+              />
+            </div>
+          )}
+
+          <div className={styles.sectionTitle}>端口转发</div>
           <div className={styles.field}>
             <label>本地主机</label>
             <input value={form.localHost} onChange={e => set({localHost: e.target.value})} spellCheck={false}/>

@@ -1,6 +1,7 @@
-// Package tunneltool SSH 隧道工具：本地端口转发（ssh -L 等价）的
-// 配置管理 + 运行时管理 + 事件推送。认证三式（密码/代理/公钥），
-// 纯 Go 实现（golang.org/x/crypto/ssh），不依赖系统 ssh 二进制。
+// Package tunneltool SSH 隧道工具：本地端口转发的配置管理 + 运行时管理 + 事件推送。
+// 转发双模式：direct（ssh -L 等价，走 direct-tcpip）/ exec（远端命令
+// stdio 中继，适配禁用本地端口转发的堡垒机如 JumpServer）。认证三式
+// （密码/代理/公钥），纯 Go 实现（golang.org/x/crypto/ssh），不依赖系统 ssh 二进制。
 package tunneltool
 
 // AuthMethod 认证方式
@@ -12,20 +13,30 @@ const (
 	AuthPublicKey AuthMethod = "publickey" // 公钥（指定 IdentityFile）
 )
 
+// ForwardMode 转发通道模式
+type ForwardMode string
+
+const (
+	ForwardDirect ForwardMode = "direct" // 直连转发（ssh -L 等价，走 direct-tcpip 通道）
+	ForwardExec   ForwardMode = "exec"   // exec 隧道（远端命令 stdio 中继，适配禁用 direct-tcpip 的堡垒机）
+)
+
 // TunnelConfig 一条隧道的完整配置
 // （yaml 用于 config.yaml 持久化，json 用于 Wails bindings 下发前端）
 type TunnelConfig struct {
-	Name       string     `yaml:"name" json:"name"`
-	Host       string     `yaml:"host" json:"host"`
-	Port       int        `yaml:"port" json:"port"` // 默认 22
-	Username   string     `yaml:"username" json:"username"`
-	AuthMethod AuthMethod `yaml:"authMethod" json:"authMethod"`
-	Password   string     `yaml:"password,omitempty" json:"password,omitempty"`
-	KeyPath    string     `yaml:"keyPath,omitempty" json:"keyPath,omitempty"` // 支持 ~ 展开
-	LocalHost  string     `yaml:"localHost" json:"localHost"`                 // 默认 127.0.0.1
-	LocalPort  int        `yaml:"localPort" json:"localPort"`
-	RemoteHost string     `yaml:"remoteHost" json:"remoteHost"` // 默认 localhost
-	RemotePort int        `yaml:"remotePort" json:"remotePort"`
+	Name        string      `yaml:"name" json:"name"`
+	Host        string      `yaml:"host" json:"host"`
+	Port        int         `yaml:"port" json:"port"` // 默认 22
+	Username    string      `yaml:"username" json:"username"`
+	AuthMethod  AuthMethod  `yaml:"authMethod" json:"authMethod"`
+	Password    string      `yaml:"password,omitempty" json:"password,omitempty"`
+	KeyPath     string      `yaml:"keyPath,omitempty" json:"keyPath,omitempty"` // 支持 ~ 展开
+	LocalHost   string      `yaml:"localHost" json:"localHost"`                 // 默认 127.0.0.1
+	LocalPort   int         `yaml:"localPort" json:"localPort"`
+	RemoteHost  string      `yaml:"remoteHost" json:"remoteHost"` // 默认 localhost
+	RemotePort  int         `yaml:"remotePort" json:"remotePort"`
+	ForwardMode ForwardMode `yaml:"forwardMode,omitempty" json:"forwardMode,omitempty"` // 默认 direct
+	ExecCommand string      `yaml:"execCommand,omitempty" json:"execCommand,omitempty"` // exec 模式远端命令；空则自动生成 nc <RemoteHost> <RemotePort>
 }
 
 // State 持久化状态（config.yaml 的 tunnel 节）
@@ -40,6 +51,9 @@ func DefaultState() State { return State{} }
 func (c TunnelConfig) normalize() TunnelConfig {
 	if c.Port == 0 {
 		c.Port = 22
+	}
+	if c.ForwardMode == "" {
+		c.ForwardMode = ForwardDirect
 	}
 	if c.LocalHost == "" {
 		c.LocalHost = "127.0.0.1"

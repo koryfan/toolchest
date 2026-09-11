@@ -15,3 +15,4 @@ build/android/gen/
 # 编译产物
 tool-dev
 .superpowers/
+toolchest

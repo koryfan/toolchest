@@ -13,6 +13,8 @@ export interface TunnelView {
   port: number;
   username: string;
   authMethod: 'password' | 'agent' | 'publickey';
+  forwardMode?: 'direct' | 'exec';
+  execCommand?: string;
   password?: string;
   keyPath?: string;
   localHost: string;

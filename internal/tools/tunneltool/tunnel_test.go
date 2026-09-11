@@ -97,41 +97,84 @@ func handleSSHConn(conn net.Conn, cfg *ssh.ServerConfig, target net.Listener) {
 	go ssh.DiscardRequests(reqs)
 
 	for newChan := range chans {
-		if newChan.ChannelType() != "direct-tcpip" {
+		switch newChan.ChannelType() {
+		case "direct-tcpip":
+			handleDirectTCPIP(newChan, target)
+		case "session":
+			handleMockExec(newChan, target) // mock：exec 命令不真执行，stdio 桥到 echo 目标（等价 nc）
+		default:
 			_ = newChan.Reject(ssh.UnknownChannelType, "unsupported")
-			continue
 		}
-		var payload struct {
-			Addr           string
-			Port           uint32
-			OriginatorAddr string
-			OriginatorPort uint32
-		}
-		if err := ssh.Unmarshal(newChan.ExtraData(), &payload); err != nil {
-			_ = newChan.Reject(ssh.Prohibited, "bad payload")
-			continue
-		}
-		ch, requests, err := newChan.Accept()
-		if err != nil {
-			continue
-		}
-		go ssh.DiscardRequests(requests)
+	}
+}
 
-		targetAddr := target.Addr().String() // mock：忽略 payload 指定地址，统一转发到 echo 目标
-		dest, err := net.Dial("tcp", targetAddr)
-		if err != nil {
-			_ = ch.Close()
-			continue
-		}
-		go func() {
+// handleDirectTCPIP 接受 direct-tcpip 通道并桥到目标
+func handleDirectTCPIP(newChan ssh.NewChannel, target net.Listener) {
+	var payload struct {
+		Addr           string
+		Port           uint32
+		OriginatorAddr string
+		OriginatorPort uint32
+	}
+	if err := ssh.Unmarshal(newChan.ExtraData(), &payload); err != nil {
+		_ = newChan.Reject(ssh.Prohibited, "bad payload")
+		return
+	}
+	ch, requests, err := newChan.Accept()
+	if err != nil {
+		return
+	}
+	go ssh.DiscardRequests(requests)
+
+	targetAddr := target.Addr().String() // mock：忽略 payload 指定地址，统一转发到 echo 目标
+	dest, err := net.Dial("tcp", targetAddr)
+	if err != nil {
+		_ = ch.Close()
+		return
+	}
+	go func() {
+		done := make(chan struct{}, 2)
+		go func() { _, _ = io.Copy(dest, ch); done <- struct{}{} }()
+		go func() { _, _ = io.Copy(ch, dest); done <- struct{}{} }()
+		<-done
+		_ = ch.Close()
+		_ = dest.Close()
+	}()
+}
+
+// handleMockExec 接受 session 通道：exec 请求不真执行命令，
+// 直接把 stdio 桥到 echo 目标（模拟远端 nc 行为，验证 exec 隧道转发）
+func handleMockExec(newChan ssh.NewChannel, target net.Listener) {
+	ch, requests, err := newChan.Accept()
+	if err != nil {
+		return
+	}
+	go func() {
+		defer ch.Close()
+		for req := range requests {
+			if req.Type != "exec" {
+				if req.WantReply {
+					_ = req.Reply(false, nil)
+				}
+				continue
+			}
+			if req.WantReply {
+				_ = req.Reply(true, nil)
+			}
+			dest, err := net.Dial("tcp", target.Addr().String())
+			if err != nil {
+				return
+			}
 			done := make(chan struct{}, 2)
 			go func() { _, _ = io.Copy(dest, ch); done <- struct{}{} }()
 			go func() { _, _ = io.Copy(ch, dest); done <- struct{}{} }()
 			<-done
-			_ = ch.Close()
+			status := struct{ Status uint32 }{}
+			_, _ = ch.SendRequest("exit-status", false, ssh.Marshal(status))
 			_ = dest.Close()
-		}()
-	}
+			return
+		}
+	}()
 }
 
 func mockAddrPort(t *testing.T, addr string) (host string, port int) {
@@ -182,7 +225,7 @@ func TestStartAndForward(t *testing.T) {
 	var conn net.Conn
 	var err error
 	for time.Now().Before(deadline) {
-		conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", host, localPort))
+		conn, err = net.Dial("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", localPort)))
 		if err == nil {
 			break
 		}
@@ -194,6 +237,57 @@ func TestStartAndForward(t *testing.T) {
 	defer conn.Close()
 
 	msg := "hello-through-tunnel\n"
+	if _, err := conn.Write([]byte(msg)); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, len(msg))
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	if _, err := io.ReadFull(conn, buf); err != nil {
+		t.Fatalf("读回显失败: %v", err)
+	}
+	if string(buf) != msg {
+		t.Fatalf("回显不符: %q", string(buf))
+	}
+}
+
+// TestStartForwardExec exec 模式端到端：Start 后本地连接经 session stdio 中继到 echo 目标
+func TestStartForwardExec(t *testing.T) {
+	srv := newMockSSHServer(t, "root", "s3cret")
+	host, sshPort := mockAddrPort(t, srv.addr)
+	localPort := freeLocalPort(t)
+
+	cfg := TunnelConfig{
+		Name: "exec隧道", Host: host, Port: sshPort, Username: "root",
+		AuthMethod: AuthPassword, Password: "s3cret",
+		LocalHost: "127.0.0.1", LocalPort: localPort,
+		RemoteHost: "localhost", RemotePort: 12345,
+		ForwardMode: ForwardExec,
+	}
+
+	m := NewManager(nil)
+	m.ReloadConfigs([]TunnelConfig{cfg})
+	if err := m.Start(cfg.Name); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer m.Stop(cfg.Name)
+
+	// 等本地监听就绪
+	deadline := time.Now().Add(2 * time.Second)
+	var conn net.Conn
+	var err error
+	for time.Now().Before(deadline) {
+		conn, err = net.Dial("tcp", net.JoinHostPort(host, fmt.Sprintf("%d", localPort)))
+		if err == nil {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if err != nil {
+		t.Fatalf("本地转发端口连不上: %v", err)
+	}
+	defer conn.Close()
+
+	msg := "hello-through-exec-tunnel\n"
 	if _, err := conn.Write([]byte(msg)); err != nil {
 		t.Fatal(err)
 	}
@@ -264,6 +358,15 @@ func TestConfigValidateNormalize(t *testing.T) {
 	got := TunnelConfig{Name: "n", Host: "h", Username: "u", LocalPort: 1, RemotePort: 2, AuthMethod: AuthPassword, Password: "p"}.normalize()
 	if got.Port != 22 || got.LocalHost != "127.0.0.1" || got.RemoteHost != "localhost" {
 		t.Errorf("默认值规范化不符: %#v", got)
+	}
+	if got := (TunnelConfig{Name: "n"}).normalize().ForwardMode; got != ForwardDirect {
+		t.Errorf("forwardMode 默认值: %q", got)
+	}
+	if got := (TunnelConfig{RemoteHost: "10.0.0.1", RemotePort: 5432}).execRemoteCommand(); got != "nc 10.0.0.1 5432" {
+		t.Errorf("默认 exec 命令: %q", got)
+	}
+	if got := (TunnelConfig{RemoteHost: "h", RemotePort: 1, ExecCommand: "socat - TCP:h:1"}).execRemoteCommand(); got != "socat - TCP:h:1" {
+		t.Errorf("自定义 exec 命令优先: %q", got)
 	}
 }
 

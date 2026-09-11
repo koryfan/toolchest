@@ -15,7 +15,7 @@ internal/
 │                          + ops.go（转换纯函数，含表驱动单测）
 │   ├── timetool/          时间戳工具（parse 结果走 Result.Data）
 │   └── tunneltool/        SSH 隧道：state.go（TunnelConfig/State）+ tunnel.go
-│                          （认证三式/转发）+ manager.go（运行时+状态事件）
+│                          （认证三式/双模式转发：direct 走 direct-tcpip、exec 走远端命令 stdio 中继）+ manager.go（运行时+状态事件）
 │                          + tool.go（Invoke: list/start/stop/test/save/delete）
 ├── toolset/               装配：Init(cfg) 注入各工具 State、events.go
 │                          （tunnel-update 事件发射）、lifecycle.go（CloseAll）
@@ -66,7 +66,7 @@ frontend/src/
 - JSON 工具（CodeMirror 代码视图：行号/折叠/缩进参考线/VS Code 风格搜索；树形视图 @uiw/react-json-view；格式化/压缩/转义/中 U 互转，缩进选中即重格式化并持久化）
 - 时间戳工具（多格式解析结果、当前时间戳）
 - 后端驱动架构（spec 见 docs/superpowers/specs/，三步实施全部完成）
-- SSH 隧道工具（列表卡片/分组、新增编辑弹窗、认证三式、开启停止测试删除、掉线检测事件推送、侧栏提醒灯、配置落 config.yaml tunnel 节）
+- SSH 隧道工具（列表卡片/分组、新增编辑弹窗、认证三式、direct/exec 双模式转发、开启停止测试删除、掉线检测事件推送、侧栏提醒灯、配置落 config.yaml tunnel 节）
 - config 泛型容器重构（map[string]string → 强类型 State + config.Decode[T]）
 
 待做：

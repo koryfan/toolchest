@@ -143,7 +143,7 @@ func forward(client *ssh.Client, cfg TunnelConfig, ln net.Listener) error {
 		}
 		go func(c net.Conn) {
 			defer c.Close()
-			remote, err := client.Dial("tcp", fmt.Sprintf("%s:%d", cfg.RemoteHost, cfg.RemotePort))
+			remote, err := openRemote(client, cfg)
 			if err != nil {
 				return // 单个连接的远端失败不致命（可能是端口没起）
 			}
@@ -155,6 +155,67 @@ func forward(client *ssh.Client, cfg TunnelConfig, ln net.Listener) error {
 		}(conn)
 	}
 }
+
+// openRemote 建立单条连接的远端通道：
+//   - direct 模式走 direct-tcpip 通道（client.Dial）
+//   - exec 模式在远端跑命令（默认 nc 目标地址），以 session stdio 中继——
+//     适配禁用了本地端口转发的堡垒机（如 JumpServer koko 会以
+//     administratively prohibited 拒绝 direct-tcpip，但放行 exec 会话）
+func openRemote(client *ssh.Client, cfg TunnelConfig) (net.Conn, error) {
+	if cfg.ForwardMode != ForwardExec {
+		return client.Dial("tcp", fmt.Sprintf("%s:%d", cfg.RemoteHost, cfg.RemotePort))
+	}
+	sess, err := client.NewSession()
+	if err != nil {
+		return nil, err
+	}
+	w, err := sess.StdinPipe()
+	if err != nil {
+		_ = sess.Close()
+		return nil, err
+	}
+	r, err := sess.StdoutPipe()
+	if err != nil {
+		_ = sess.Close()
+		return nil, err
+	}
+	if err := sess.Start(cfg.execRemoteCommand()); err != nil {
+		_ = sess.Close()
+		return nil, err
+	}
+	return &sessionConn{sess: sess, r: r, w: w}, nil
+}
+
+// execRemoteCommand exec 模式远端执行的命令；自定义命令优先，否则按目标地址生成 nc
+func (c TunnelConfig) execRemoteCommand() string {
+	if c.ExecCommand != "" {
+		return c.ExecCommand
+	}
+	return fmt.Sprintf("nc %s %d", c.RemoteHost, c.RemotePort)
+}
+
+// sessionConn 把 ssh session 的 stdio 管道包装成 net.Conn，供 io.Copy 桥接
+type sessionConn struct {
+	sess *ssh.Session
+	r    io.Reader
+	w    io.WriteCloser
+}
+
+func (c *sessionConn) Read(p []byte) (int, error)  { return c.r.Read(p) }
+func (c *sessionConn) Write(p []byte) (int, error) { return c.w.Write(p) }
+func (c *sessionConn) Close() error                { return c.sess.Close() }
+
+func (c *sessionConn) LocalAddr() net.Addr  { return pipeAddr{} }
+func (c *sessionConn) RemoteAddr() net.Addr { return pipeAddr{} }
+
+func (c *sessionConn) SetDeadline(time.Time) error      { return nil }
+func (c *sessionConn) SetReadDeadline(time.Time) error  { return nil }
+func (c *sessionConn) SetWriteDeadline(time.Time) error { return nil }
+
+type pipeAddr struct{}
+
+func (pipeAddr) Network() string { return "pipe" }
+func (pipeAddr) String() string  { return "pipe" }
 
 // testTunnel 三步验证：能连 + 能认证 + 远程端口可达（不保持转发）
 func testTunnel(cfg TunnelConfig) error {
@@ -169,6 +230,18 @@ func testTunnel(cfg TunnelConfig) error {
 		return err
 	}
 	defer client.Close()
+	if cfg.ForwardMode == ForwardExec {
+		// exec 模式没有 direct-tcpip，远端端口可达性经 nc 探测退出码验证
+		sess, err := client.NewSession()
+		if err != nil {
+			return err
+		}
+		defer sess.Close()
+		if err := sess.Run(fmt.Sprintf("nc -z -w 3 %s %d", cfg.RemoteHost, cfg.RemotePort)); err != nil {
+			return fmt.Errorf("远程端口不通：%s:%d 无法连接（nc 探测失败）", cfg.RemoteHost, cfg.RemotePort)
+		}
+		return nil
+	}
 	remote, err := client.Dial("tcp", fmt.Sprintf("%s:%d", cfg.RemoteHost, cfg.RemotePort))
 	if err != nil {
 		return fmt.Errorf("远程端口不通：%s:%d 无法连接", cfg.RemoteHost, cfg.RemotePort)
