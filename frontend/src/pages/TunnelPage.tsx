@@ -56,6 +56,7 @@ function Card({tun}: { tun: TunnelView }) {
         )}
         <button onClick={() => op('test', tun.name)}>测试</button>
         <button onClick={() => useStore.getState().openTunnelDialog(tun)}>修改</button>
+        <button onClick={() => useStore.getState().copyTunnel(tun)}>复制</button>
         <span className={styles.spacer}/>
         {confirmDel ? (
           <>

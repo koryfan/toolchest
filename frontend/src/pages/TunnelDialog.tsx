@@ -127,7 +127,8 @@ export default function TunnelDialog() {
   // 打开时用编辑目标（或空表单）初始化
   useEffect(() => {
     if (dialog) {
-      setForm(dialog.editing ? fromTunnel(dialog.editing) : emptyForm);
+      setForm(dialog.editing ? fromTunnel(dialog.editing)
+        : dialog.seed ? {...fromTunnel(dialog.seed), name: ''} : emptyForm);
       setTestRet(null);
     }
   }, [dialog]);

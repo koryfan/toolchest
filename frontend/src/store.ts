@@ -59,14 +59,15 @@ interface AppState {
   descs: ToolDesc[];
   /** 隧道列表（事件推送 + 初始 list） */
   tunnelData: TunnelData;
-  /** 隧道编辑弹窗（null = 关闭） */
-  tunnelDialog: {editing: TunnelView | null} | null;
+  /** 隧道编辑弹窗（null = 关闭）；editing = 修改目标，seed = 复制来源（新增态预填，名称清空） */
+  tunnelDialog: {editing: TunnelView | null; seed?: TunnelView} | null;
   /** DBeaver 凭据列表（null = 尚未打开过目录） */
   dbeaverEntries: DbeaverEntry[] | null;
   /** DBeaver 当前工作目录（导出默认文件名取 basename） */
   dbeaverDir: string | null;
   setContent: (toolID: string, content: string) => void;
   setTunnelData: (d: TunnelData) => void;
+  copyTunnel: (t: TunnelView) => void;
   openTunnelDialog: (editing: TunnelView | null) => void;
   closeTunnelDialog: () => void;
   setDbeaverEntries: (entries: DbeaverEntry[] | null, dir?: string) => void;
@@ -145,6 +146,10 @@ export const useStore = create<AppState>((set, get) => ({
 
   openTunnelDialog: editing => {
     set({tunnelDialog: {editing}});
+  },
+
+  copyTunnel: t => {
+    set({tunnelDialog: {editing: null, seed: t}});
   },
 
   closeTunnelDialog: () => {
