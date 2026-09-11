@@ -14,13 +14,14 @@ import (
 type Tool struct {
 	mu       sync.Mutex // 保护 state.Tunnels（opSave/opDelete/resolveConfig 并发）
 	state    State
+	emit     func() // 配置变化通知（保存/删除后推送 tunnel-update，注入自装配层）
 	manager  *Manager
 	handlers map[string]domain.OpHandler
 }
 
 // New 创建（state 由装配层经 config.Decode 注入；emit 为事件发射回调，测试可传 nil）
 func New(st State, emit func()) *Tool {
-	t := &Tool{state: st, manager: NewManager(emit)}
+	t := &Tool{state: st, emit: emit, manager: NewManager(emit)}
 	t.handlers = map[string]domain.OpHandler{
 		"list":   t.opList,
 		"start":  t.opStart,
@@ -136,6 +137,8 @@ func (t *Tool) opSave(arg string) domain.Result {
 		t.state.Tunnels = append(t.state.Tunnels, cfg)
 	}
 	t.manager.ReloadConfigs(t.state.Tunnels)
+
+	t.notifyConfigChange()
 	action := "新增"
 	if replaced {
 		action = "更新"
@@ -151,10 +154,18 @@ func (t *Tool) opDelete(arg string) domain.Result {
 			t.state.Tunnels = append(t.state.Tunnels[:i], t.state.Tunnels[i+1:]...)
 			t.manager.Stop(arg) // running 先停再删
 			t.manager.ReloadConfigs(t.state.Tunnels)
+			t.notifyConfigChange()
 			return domain.Result{Notice: "隧道已删除：" + arg, Data: t.data()}
 		}
 	}
 	return domain.Result{IsError: true, Notice: "隧道不存在: " + arg}
+}
+
+// notifyConfigChange 配置变化（保存/删除）后推送 tunnel-update，前端列表即时刷新
+func (t *Tool) notifyConfigChange() {
+	if t.emit != nil {
+		t.emit()
+	}
 }
 
 // resolveConfig arg 是隧道名或配置 JSON

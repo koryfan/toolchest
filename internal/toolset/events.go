@@ -17,5 +17,9 @@ func emitTunnelUpdate() {
 		return
 	}
 	tun := t.(*tunneltool.Tool)
-	application.Get().Event.Emit(TunnelUpdateEvent, tun.Data())
+	app := application.Get()
+	if app == nil {
+		return // 非 GUI 环境（单测）：无事件循环，跳过
+	}
+	app.Event.Emit(TunnelUpdateEvent, tun.Data())
 }
