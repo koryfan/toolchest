@@ -6,6 +6,7 @@
   --bg-input: rgb(40, 43, 53);      /* 输入框背景 */
   --bg-titlebar: rgb(24, 26, 33);
   --color-text: rgb(210, 214, 226); /* 默认文字 */
+  --color-text-secondary: rgb(138, 143, 159); /* 次要文字（各页面原 fallback #8a8f9f 的权威值） */
   --color-title: rgb(230, 232, 240);
   --color-accent: rgb(100, 230, 140); /* accent 绿 */
   --color-error: rgb(230, 90, 90);

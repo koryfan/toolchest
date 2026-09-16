@@ -3,6 +3,7 @@ package timetool
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestMeta(t *testing.T) {
@@ -44,6 +45,24 @@ func TestNow(t *testing.T) {
 	r := New().Invoke("now", "")
 	if r.IsError || len(r.Content) != 10 {
 		t.Fatalf("now 应返回 10 位秒级时间戳: %#v", r)
+	}
+}
+
+func TestNowTime(t *testing.T) {
+	tl := New()
+	r := tl.Invoke("nowTime", "")
+	if r.IsError {
+		t.Fatalf("nowTime 报错: %s", r.Notice)
+	}
+	// 填充格式固定为 2006-01-02 15:04:05 -0700 MST
+	if _, err := time.Parse("2006-01-02 15:04:05 -0700 MST", r.Content); err != nil {
+		t.Fatalf("nowTime 格式不符: %q: %v", r.Content, err)
+	}
+	// 填充值必须能被解析（往返可用）
+	tl.SetContent(r.Content)
+	pr := tl.Invoke("parse", "")
+	if pr.IsError {
+		t.Fatalf("nowTime 结果应可解析: %s", pr.Notice)
 	}
 }
 

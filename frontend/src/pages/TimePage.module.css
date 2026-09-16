@@ -44,6 +44,24 @@
   background: rgba(100, 230, 140, 0.1);
 }
 
+/* 次要按钮（清空）：灰边灰字弱化，与主操作「解析」区分 */
+.btnSecondary {
+  padding: 8px 18px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-divider);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.btnSecondary:hover {
+  color: var(--color-text);
+  border-color: var(--color-text-secondary);
+  background: var(--color-hover);
+}
+
 .results {
   display: flex;
   flex-direction: column;

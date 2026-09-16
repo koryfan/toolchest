@@ -22,8 +22,9 @@ type Tool struct {
 func New() *Tool {
 	t := &Tool{}
 	t.handlers = map[string]domain.OpHandler{
-		"now":   t.opNow,
-		"parse": t.opParse, // 前端输入触发（不作为按钮/菜单声明在 Actions）
+		"nowTime": t.opNowTime,
+		"now":     t.opNow,
+		"parse":   t.opParse, // 前端输入触发（不作为按钮/菜单声明在 Actions）
 	}
 	return t
 }
@@ -32,9 +33,10 @@ func (t *Tool) Meta() domain.Meta {
 	return domain.Meta{ID: "time", Title: "时间戳转换", Icon: "time", ContentType: "time"}
 }
 
-// Actions 当前只有一个操作：填充当前时间戳
+// Actions 填充当前时间 / 当前时间戳两个按钮
 func (t *Tool) Actions() []domain.Action {
 	return []domain.Action{
+		domain.NewButton("nowTime", "当前时间", ""),
 		domain.NewButton("now", "当前时间戳", ""),
 	}
 }
@@ -58,6 +60,13 @@ func (t *Tool) Invoke(op string, arg string) domain.Result {
 }
 
 // --- 操作回调（锁内执行） ---
+
+// opNowTime 填充当前本地时间（与解析器 LocalTime 同款格式，填充后可直接解析）
+func (t *Tool) opNowTime(arg string) domain.Result {
+	ts := time.Now().Format("2006-01-02 15:04:05 -0700 MST")
+	t.content = ts
+	return domain.Result{Content: ts}
+}
 
 // opNow 填充当前秒级时间戳
 func (t *Tool) opNow(arg string) domain.Result {
