@@ -48,14 +48,14 @@ const localHandlers: Record<string, LocalHandler> = {
   },
 };
 
-/** 执行一个操作并统一处理 Result（内容回写/提示/配置刷新） */
-export async function invoke(toolID: string, op: string, arg = ''): Promise<Result> {
+/** 执行一个操作并统一处理 Result（内容回写/提示/配置刷新）；silent = 跳过提示（如首次自动生成） */
+export async function invoke(toolID: string, op: string, arg = '', silent = false): Promise<Result> {
   const r = await Invoke(toolID, op, arg);
   const store = useStore.getState();
   if (r.content) {
     store.replaceContent(toolID, r.content);
   }
-  if (r.notice) {
+  if (r.notice && !silent) {
     if (r.isError) {
       showError(r.notice);
     } else {

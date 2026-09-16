@@ -11,10 +11,10 @@ import styles from './UuidPage.module.css';
 export default function UuidPage() {
   const content = useToolContent('uuid');
 
-  // 首次进入自动生成（结果经 invoke 回写 store）
+  // 首次进入自动生成（静默：不弹「已生成」提示，提示只属于点「生成」按钮）
   useEffect(() => {
     if (!(useStore.getState().tools['uuid']?.content ?? '').trim()) {
-      void invoke('uuid', 'gen');
+      void invoke('uuid', 'gen', '', true);
     }
   }, []);
 

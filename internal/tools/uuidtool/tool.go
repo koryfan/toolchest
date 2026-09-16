@@ -50,9 +50,10 @@ func (t *Tool) Actions() []domain.Action {
 // actionsLocked 构造操作区配置（调用方须持锁；Invoke 回调内复用免重入死锁）
 func (t *Tool) actionsLocked() []domain.Action {
 
-	countOpts := make([]domain.RadioOption, 0, MaxCount)
-	for i := 1; i <= MaxCount; i++ {
-		s := strconv.Itoa(i)
+	// 数量只留常用档位（校验上限仍是 MaxCount）
+	countOpts := make([]domain.RadioOption, 0, 4)
+	for _, n := range []int{1, 2, 5, 10} {
+		s := strconv.Itoa(n)
 		countOpts = append(countOpts, domain.RadioOption{Value: s, Label: s})
 	}
 
@@ -115,7 +116,7 @@ func (t *Tool) opGen(arg string) domain.Result {
 	content := strings.Join(out, "\n")
 	return domain.Result{
 		Content: content,
-		Notice:  fmt.Sprintf("已生成 %d 个 UUID（V%s）", t.state.Count, strings.ToUpper(t.state.Version)),
+		Notice:  fmt.Sprintf("已生成 %d 个 UUID（%s）", t.state.Count, strings.ToUpper(t.state.Version)),
 		Actions: t.actionsLocked(),
 	}
 }

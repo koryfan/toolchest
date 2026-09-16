@@ -29,6 +29,9 @@ func TestGenV4(t *testing.T) {
 	if u, err := uuid.Parse(r.Content); err != nil || u.Version() != 4 {
 		t.Fatalf("应为 V4: %q %v", r.Content, err)
 	}
+	if want := "已生成 1 个 UUID（V4）"; r.Notice != want {
+		t.Fatalf("提示文案不符: %q, want %q", r.Notice, want)
+	}
 }
 
 func TestGenV7(t *testing.T) {
