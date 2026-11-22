@@ -2,7 +2,7 @@
 // Action.Local 命中的前端本地操作（清空/复制）走本文件注册表。
 import {Invoke} from '../bindings/toolchest/internal/services/appservice';
 import type {Action, Result} from '../bindings/toolchest/internal/domain/models';
-import {useStore, type DbeaverEntry} from './store';
+import {useStore, dispatchToolData} from './store';
 import {showSuccess, showError} from './components/Notice';
 
 /** 本地操作上下文 */
@@ -63,13 +63,8 @@ export async function invoke(toolID: string, op: string, arg = '', silent = fals
     }
   }
   if (r.data) {
-    // DBeaver 凭据列表（成功时带 entries；失败不带，保留旧列表供对照）
-    if (toolID === 'dbeaver') {
-      const data = r.data as {entries?: DbeaverEntry[]; dir?: string};
-      if (data.entries) {
-        store.setDbeaverEntries(data.entries, data.dir);
-      }
-    }
+    // 工具数据（DBeaver 凭据列表等）分发到页面注册的回调
+    dispatchToolData(toolID, r.data);
   }
   if (r.actions) {
     store.setActions(toolID, r.actions);

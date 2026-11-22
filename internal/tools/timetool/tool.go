@@ -1,5 +1,5 @@
 // Package timetool 时间戳工具：输入（秒/毫秒时间戳或日期串）→ 多格式结果。
-// 解析结果走 Result.Data（多字段），解析逻辑在 internal/transform。
+// 解析结果走 Result.Data（多字段），解析纯函数在本包 parse.go。
 package timetool
 
 import (
@@ -8,9 +8,7 @@ import (
 	"time"
 
 	"toolchest/internal/domain"
-	"toolchest/internal/transform"
 )
-
 // Tool 时间戳工具（内容镜像即输入行；无设置类状态）
 type Tool struct {
 	mu       sync.Mutex
@@ -49,14 +47,9 @@ func (t *Tool) SetContent(s string) {
 }
 
 // Invoke 操作分发：在锁内查找并执行回调
+// Invoke 操作分发（基座统一实现：锁内查表执行回调）
 func (t *Tool) Invoke(op string, arg string) domain.Result {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	h, ok := t.handlers[op]
-	if !ok {
-		return domain.Result{IsError: true, Notice: "未知操作: " + op}
-	}
-	return h(arg)
+	return domain.Dispatch(&t.mu, t.handlers, op, arg)
 }
 
 // --- 操作回调（锁内执行） ---
@@ -76,14 +69,12 @@ func (t *Tool) opNow(arg string) domain.Result {
 }
 
 // opParse 解析当前输入为多格式结果
+// opParse 解析当前输入为多格式结果
 func (t *Tool) opParse(arg string) domain.Result {
 	if t.content == "" {
 		return domain.Result{IsError: true, Notice: "请输入时间戳或日期"}
 	}
-	p := transform.NewTimeParser()
-	p.SetInput(t.content)
-	p.Parse()
-	pr := p.Result()
+	pr := ParseTime(t.content, nil)
 	if pr.Error != "" {
 		return domain.Result{IsError: true, Notice: pr.Error}
 	}

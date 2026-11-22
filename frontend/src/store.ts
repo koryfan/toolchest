@@ -1,9 +1,10 @@
 // 内容镜像 store：Go 是内容权威，前端本地即时更新保证输入流畅，
 // debounce 300ms 推 UpdateContent 同步镜像；op 结果经 replaceContent 即时回写。
-// 隧道数据由 Go 事件（tunnel-update）推送 + 初始 list 拉取，前端只渲染。
+// 后台数据由 Go 事件（tool-update）推送，经各页面注册的回调分发，
+// 本文件只做通用镜像/描述/弹窗状态，不认识任何具体工具。
 import {create} from 'zustand';
 import {Events} from '@wailsio/runtime';
-import {UpdateContent, Invoke} from '../bindings/toolchest/internal/services/appservice';
+import {UpdateContent, Tools} from '../bindings/toolchest/internal/services/appservice';
 import type {Action, ToolDesc} from '../bindings/toolchest/internal/domain/models';
 
 /** 隧道视图（Go tunneltool.TunnelView 经 JSON 序列化） */
@@ -170,34 +171,49 @@ export function useToolContent(toolID: string): string {
   return useStore(s => s.tools[toolID]?.content ?? '');
 }
 
-// ---- 隧道事件订阅（模块级初始化一次） ----
+// ---- 工具后台数据分发（模块级初始化一次） ----
 
-let tunnelEventsBound = false;
+// 各工具的数据消费回调（页面模块加载时注册）：Go 事件推送与 Invoke 结果
+// 两条入口共用一张表，通用层不认识任何具体工具
+const dataHandlers: Record<string, (data: any) => void> = {};
 
-export function initTunnelEvents(): void {
-  if (tunnelEventsBound) return;
-  tunnelEventsBound = true;
-  Events.On('tunnel-update', ev => {
-    const data = ev.data as unknown as TunnelData;
-    if (data && Array.isArray(data.tunnels)) {
-      useStore.getState().setTunnelData(data);
-    }
-  });
-  // 初始拉取一次（事件只在状态变化时发）
-  void invokeTunnelList();
+/** 注册某工具的数据消费回调（页面模块顶层调用一次） */
+export function onToolData(toolID: string, handler: (data: any) => void): void {
+  dataHandlers[toolID] = handler;
 }
 
-// DBeaver：启动时若有缓存目录（Go State.CurrentDir），refresh 恢复列表
-export function initDbeaverRestore(): void {
-  void Invoke('dbeaver', 'refresh', '').catch(() => {
-    // 无缓存目录时 Go 返回错误（尚未选择目录），静默忽略
-  });
+/** 分发一份工具数据（Invoke 结果 / tool-update 事件共用） */
+export function dispatchToolData(toolID: string, data: unknown): void {
+  dataHandlers[toolID]?.(data);
 }
 
-async function invokeTunnelList(): Promise<void> {
-  const r = await Invoke('tunnel', 'list', '');
-  const data = r.data as unknown as TunnelData;
-  if (data && Array.isArray(data.tunnels)) {
-    useStore.getState().setTunnelData(data);
+/** 拉取工具描述：actions/descs 刷新 + activeId 失效回退首个 */
+export async function refreshDescs(): Promise<void> {
+  const list = await Tools();
+  if (!list || list.length === 0) return;
+  const store = useStore.getState();
+  store.setDescs(list);
+  for (const d of list) {
+    store.setActions(d.meta.id, d.actions ?? []);
   }
+  if (!list.some(d => d.meta.id === store.activeId)) {
+    store.setActiveId(list[0].meta.id);
+  }
+}
+
+let toolEventsBound = false;
+
+/** 订阅 tool-update 事件（Go 后台状态变化 → 分发数据 + 刷新侧栏提醒灯） */
+export function initToolEvents(): void {
+  if (toolEventsBound) return;
+  toolEventsBound = true;
+  Events.On('tool-update', ev => {
+    const payload = ev.data as unknown as {id?: string; data?: unknown};
+    if (!payload?.id) return;
+    dispatchToolData(payload.id, payload.data);
+    // 提醒灯（ToolDesc.Running）随后台状态变化刷新
+    void refreshDescs().catch(() => {
+      // 刷新失败静默，下次事件再试
+    });
+  });
 }

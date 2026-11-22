@@ -23,7 +23,7 @@ func TestInvokeEditPersists(t *testing.T) {
 	cfg := config.NewAt(path)
 	cfg.Load()
 	toolset.Init(cfg)
-	svc := NewAppService(cfg)
+	svc := NewAppService()
 
 	form := `{"name":"n1","host":"h","port":2222,"username":"u","authMethod":"publickey","keyPath":"~/.ssh/id_rsa","localHost":"127.0.0.1","localPort":9999,"remoteHost":"localhost","remotePort":5432,"forwardMode":"exec"}`
 	r := svc.Invoke("tunnel", "save", form)

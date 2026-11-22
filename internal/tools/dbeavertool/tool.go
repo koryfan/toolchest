@@ -67,12 +67,9 @@ func (t *Tool) State() any {
 func (t *Tool) RunningInBackground() bool { return false }
 
 // Invoke 操作分发
+// Invoke 操作分发（回调含慢操作，自行加锁 → mu 传 nil）
 func (t *Tool) Invoke(op string, arg string) domain.Result {
-	h, ok := t.handlers[op]
-	if !ok {
-		return domain.Result{IsError: true, Notice: "未知操作: " + op}
-	}
-	return h(arg)
+	return domain.Dispatch(nil, t.handlers, op, arg)
 }
 
 // result 载荷：凭据列表 + 动作刷新（目录下拉更新）

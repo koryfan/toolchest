@@ -55,12 +55,9 @@ func (t *Tool) State() any { return t.state }
 func (t *Tool) RunningInBackground() bool { return t.manager.AnyRunning() }
 
 // Invoke 操作分发
+// Invoke 操作分发（慢 I/O 工具：mu 传 nil，回调自行加锁）
 func (t *Tool) Invoke(op string, arg string) domain.Result {
-	h, ok := t.handlers[op]
-	if !ok {
-		return domain.Result{IsError: true, Notice: "未知操作: " + op}
-	}
-	return h(arg)
+	return domain.Dispatch(nil, t.handlers, op, arg)
 }
 
 // CloseAll 停止全部隧道（应用退出时由装配层调用）

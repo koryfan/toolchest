@@ -120,9 +120,14 @@ export interface Result {
 }
 
 /**
- * ToolDesc Tools() 下发单元：元信息 + 操作区配置
+ * ToolDesc Tools() 下发单元：元信息 + 操作区配置 + 后台运行信号
  */
 export interface ToolDesc {
     "meta": Meta;
     "actions": Action[] | null;
+
+    /**
+     * 有后台任务在跑（侧栏提醒灯）
+     */
+    "running": boolean;
 }

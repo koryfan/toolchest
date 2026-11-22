@@ -231,14 +231,16 @@ func testTunnel(cfg TunnelConfig) error {
 	}
 	defer client.Close()
 	if cfg.ForwardMode == ForwardExec {
-		// exec 模式没有 direct-tcpip，远端端口可达性经 nc 探测退出码验证
+		// exec 模式直接演练转发命令本身：会话能启动即通过。
+		// 不用 nc 探测——远端未必装了 nc，且自定义命令场景下
+		// 端口可达性语义由命令自身决定，无法通用验证
 		sess, err := client.NewSession()
 		if err != nil {
 			return err
 		}
 		defer sess.Close()
-		if err := sess.Run(fmt.Sprintf("nc -z -w 3 %s %d", cfg.RemoteHost, cfg.RemotePort)); err != nil {
-			return fmt.Errorf("远程端口不通：%s:%d 无法连接（nc 探测失败）", cfg.RemoteHost, cfg.RemotePort)
+		if err := sess.Start(cfg.execRemoteCommand()); err != nil {
+			return fmt.Errorf("远端命令启动失败: %s", err)
 		}
 		return nil
 	}

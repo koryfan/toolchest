@@ -53,12 +53,18 @@ func NewManager(emit func()) *Manager {
 }
 
 // ReloadConfigs 配置变化时同步运行副本（按 Name 对齐；
+// ReloadConfigs 配置变化时同步运行副本（按 Name 对齐；
 // 被删的 running 隧道自动停止）。
 func (m *Manager) ReloadConfigs(tunnels []TunnelConfig) {
 	m.mu.Lock()
 	for _, cfg := range tunnels {
 		if rt, ok := m.runtimes[cfg.Name]; ok {
 			rt.cfg = cfg // 运行中的配置热更新（转发参数下次 Start 生效）
+			if rt.status != StatusRunning {
+				// 出错/停止的隧道配置已变，旧错误信息失去意义
+				rt.status = StatusStopped
+				rt.errMsg = ""
+			}
 		}
 	}
 	// 已删除的隧道停止
@@ -141,6 +147,19 @@ func (m *Manager) Start(name string) error {
 		m.notify()
 	}()
 
+	go func() {
+		// 连接级掉线检测：空闲隧道（无活动连接）感知不到 SSH 断开，
+		// accept 循环也不会退出——经 client.Wait() 兜底
+		_ = client.Wait()
+		m.mu.Lock()
+		if rt.status == StatusRunning {
+			rt.status = StatusError
+			rt.errMsg = "连接已断开（网络故障或服务端关闭）"
+			_ = ln.Close() // 让转发循环一并收尾
+		}
+		m.mu.Unlock()
+		m.notify()
+	}()
 	m.notify()
 	return nil
 }

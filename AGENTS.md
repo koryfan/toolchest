@@ -8,26 +8,28 @@
 main.go                    入口：装配 config/toolset/services，启动应用，退出时 CloseAll
 internal/
 ├── domain/                工具域核心类型（零依赖）：Tool 契约（含 State()/
-│                          RunningInBackground()）、Meta、Action/ActionType、
-│                          Result（Data any）、OpHandler、构造函数
+│                          RunningInBackground()/DataReporter）、Meta、Action/ActionType、
+│                          Result（Data any）、OpHandler、ToolDesc、Dispatch
+│                          （Invoke 分发基座：锁策略由 mu 参数决定）+ 构造函数
 ├── tools/                 工具收纳目录（无自身包，子包平铺）
-│   ├── jsontool/          JSON 工具：State 注入 + handlers 回调表
-│                          + ops.go（转换纯函数，含表驱动单测）
-│   ├── timetool/          时间戳工具（parse 结果走 Result.Data）
+│   ├── jsontool/          JSON 工具：State 注入 + transformOps 表驱动
+│   │                      handlers（ops.go 转换纯函数，含表驱动单测）
+│   ├── timetool/          时间戳工具（parse.go ParseTime 纯函数 +
+│   │                      parse 结果走 Result.Data）
 │   └── tunneltool/        SSH 隧道：state.go（TunnelConfig/State）+ tunnel.go
-│                          （认证三式/双模式转发：direct 走 direct-tcpip、exec 走远端命令 stdio 中继）+ manager.go（运行时+状态事件）
-│                          + tool.go（Invoke: list/start/stop/test/save/delete）
-├── toolset/               装配：Init(cfg) 注入各工具 State、events.go
-│                          （tunnel-update 事件发射）、lifecycle.go（CloseAll）
-├── services/              Wails 服务层（AppService：Tools/Invoke/UpdateContent）
+│                          （认证三式/双模式转发：direct 走 direct-tcpip、exec 走远端命令 stdio 中继）
+│                          + manager.go（运行时+状态事件+client.Wait 掉线检测）+ tool.go（Invoke: list/start/stop/test/save/delete）
+├── toolset/               装配：Init(cfg) state helper 注入各工具 State、
+│                          Invoke 落盘收口、events.go（tool-update 事件发射）
+│                          lifecycle.go（CloseAll）
+├── services/              Wails 服务层（AppService 薄桥接：Tools/Invoke/UpdateContent）
 ├── config/                YAML 持久化（~/.config/toolchest/config.yaml）：
 │                          通用容器 map[string]any + 泛型 Decode[T] 取强类型，
 │                          State 结构体由各工具包自定义（config 零感知）
-└── transform/             纯转换逻辑（现仅 time.go TimeParser）
 pkg/strutil/               通用字符串工具（escape/unicode 转换）
 frontend/src/
 ├── store.ts               zustand：内容镜像（debounce 300ms 推 Go）
-│                          + 隧道数据（tunnel-update 事件）+ 弹窗状态
+│                          + 工具后台数据（tool-update 事件，页面注册回调分发）+ 弹窗状态
 ├── actions.ts             invoke 统一 Result 处理 + 本地 handler 注册表
 │                          （clear/copy/tunnelNew）
 ├── App.tsx                contentRegistry（contentType→组件）+ icon 映射 + 侧栏提醒灯
@@ -36,7 +38,7 @@ frontend/src/
                            JsonEditor（CodeMirror）、JsonTree、Toolbar、Sidebar
 ```
 
-依赖方向：main → toolset/services → tools/* → domain + transform；前端只依赖 bindings 生成的类型与 AppService 三方法 + @wailsio/runtime 事件。
+依赖方向：main → toolset/services → tools/* → domain；前端只依赖 bindings 生成的类型与 AppService 三方法 + @wailsio/runtime 事件。
 
 ## 常用命令
 

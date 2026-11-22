@@ -26,7 +26,7 @@ func main() {
 		Name:        "toolchest",
 		Description: "开发者自用工具集",
 		Services: []application.Service{
-			application.NewService(services.NewAppService(cfg)),
+			application.NewService(services.NewAppService()),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

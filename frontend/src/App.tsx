@@ -1,5 +1,5 @@
 import {useEffect, type ComponentType} from 'react';
-import {Tools} from '../bindings/toolchest/internal/services/appservice';
+
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
 import {NoticeProvider} from './components/Notice';
@@ -8,7 +8,7 @@ import TimePage from './pages/TimePage';
 import TunnelPage from './pages/TunnelPage';
 import DbeaverPage from './pages/DbeaverPage';
 import UuidPage from './pages/UuidPage';
-import {useStore, initTunnelEvents, initDbeaverRestore} from './store';
+import {useStore, initToolEvents, refreshDescs} from './store';
 import styles from './App.module.css';
 
 // 内容区注册表：Go 下发的 Meta.ContentType → 前端组件。
@@ -35,26 +35,13 @@ const iconUrls: Record<string, [white: string, gray: string]> = {
 function App() {
   const descs = useStore(s => s.descs);
   const activeId = useStore(s => s.activeId);
-  const setDescs = useStore(s => s.setDescs);
-  const setActiveId = useStore(s => s.setActiveId);
   const flush = useStore(s => s.flush);
 
-  const tunnelData = useStore(s => s.tunnelData);
-
-  // 启动拉取工具配置（Go 唯一权威）+ 隧道事件订阅
+  // 启动拉取工具配置（Go 唯一权威）+ 工具后台事件订阅
   useEffect(() => {
-    initTunnelEvents();
-    initDbeaverRestore();
-    void Tools().then(list => {
-      if (list && list.length > 0) {
-        setDescs(list);
-        for (const d of list) {
-          useStore.getState().setActions(d.meta.id, d.actions ?? []);
-        }
-        setActiveId(list[0].meta.id);
-      }
-    });
-  }, [setDescs, setActiveId]);
+    initToolEvents();
+    void refreshDescs();
+  }, []);
 
   const active = descs.find(d => d.meta.id === activeId);
   const actions = useStore(s => s.actions[activeId]) ?? active?.actions ?? [];
@@ -69,10 +56,10 @@ function App() {
             url: (iconUrls[d.meta.icon] ?? ['', ''])[d.meta.id === activeId ? 0 : 1],
             title: d.meta.title,
             selected: d.meta.id === activeId,
-            running: d.meta.id === 'tunnel' && tunnelData.running > 0,
+            running: d.running,
             onClick: () => {
               flush(activeId); // 切走前把 pending 镜像推给 Go
-              setActiveId(d.meta.id);
+              useStore.getState().setActiveId(d.meta.id);
             },
           }))}
         />

@@ -1,5 +1,5 @@
 // JSON 转换纯函数：无状态，输入输出都是字符串。
-// 逻辑从 internal/transform 并入（jsontool 自己已持有 content+indent，
+// 逻辑从旧 internal/transform 包并入（jsontool 自己已持有 content+indent，
 // 无需再经 JSONTransformer 中转一层）；通用字符串操作委托 pkg/strutil。
 package jsontool
 

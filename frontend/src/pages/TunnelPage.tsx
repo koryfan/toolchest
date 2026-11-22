@@ -1,12 +1,23 @@
 import {useState} from 'react';
 import {invoke} from '../actions';
-import {useStore, type TunnelView} from '../store';
+import {useStore, onToolData, type TunnelView, type TunnelData} from '../store';
 import TunnelDialog from './TunnelDialog';
 import styles from './TunnelPage.module.css';
 
 // SSH 隧道页：卡片列表（运行中/异常置顶分组）+ 新增卡片 + 编辑弹窗。
-// 数据全部来自 Go（tunnel-update 事件推送 + Invoke 结果回写 store），本页只渲染。
+// 数据全部来自 Go（tool-update 事件推送 + Invoke 结果回写 store），本页只渲染。
 
+// 数据入口注册：Go tool-update 事件与 Invoke 结果共用此回调；
+// 事件只在状态变化时发，初始列表靠一次 list 拉取
+onToolData('tunnel', data => {
+  const d = data as TunnelData;
+  if (d && Array.isArray(d.tunnels)) {
+    useStore.getState().setTunnelData(d);
+  }
+});
+void invoke('tunnel', 'list', '').catch(() => {
+  // 初始拉取失败静默（Go 侧报错已有 notice 通道）
+});
 const authLabels: Record<string, string> = {
   password: '密码',
   agent: '代理',

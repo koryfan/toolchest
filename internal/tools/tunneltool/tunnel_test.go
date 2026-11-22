@@ -9,6 +9,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -25,6 +26,19 @@ type mockSSHServer struct {
 	ln       net.Listener
 	targetLn net.Listener // 转发目标（echo 服务）
 	addr     string
+
+	mu    sync.Mutex
+	conns []net.Conn // 已建立的 SSH 连接（dropConns 模拟服务端断开）
+}
+
+// dropConns 断开全部已建立的 SSH 连接（模拟服务端故障/网络中断）
+func (s *mockSSHServer) dropConns() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, c := range s.conns {
+		_ = c.Close()
+	}
+	s.conns = nil
 }
 
 func newMockSSHServer(t *testing.T, user, pass string) *mockSSHServer {
@@ -69,12 +83,16 @@ func newMockSSHServer(t *testing.T, user, pass string) *mockSSHServer {
 	}
 	cfg.AddHostKey(signer)
 
+	srv := &mockSSHServer{ln: ln, targetLn: targetLn, addr: ln.Addr().String()}
 	go func() {
 		for {
 			conn, err := ln.Accept()
 			if err != nil {
 				return
 			}
+			srv.mu.Lock()
+			srv.conns = append(srv.conns, conn)
+			srv.mu.Unlock()
 			go handleSSHConn(conn, cfg, targetLn)
 		}
 	}()
@@ -83,7 +101,7 @@ func newMockSSHServer(t *testing.T, user, pass string) *mockSSHServer {
 		_ = ln.Close()
 		_ = targetLn.Close()
 	})
-	return &mockSSHServer{ln: ln, targetLn: targetLn, addr: ln.Addr().String()}
+	return srv
 }
 
 // handleSSHConn 处理一条 SSH 连接：接受 direct-tcpip 通道并桥到目标
@@ -413,4 +431,54 @@ func TestToolSaveListDelete(t *testing.T) {
 	if r := tl.Invoke("delete", "不存在"); !r.IsError {
 		t.Fatal("删除不存在的隧道应报错")
 	}
+}
+
+// TestReloadConfigsResetsStaleError 编辑出错/停止的隧道后，旧错误状态应重置
+// （配置已变，残留的 errMsg 会误导用户）
+func TestReloadConfigsResetsStaleError(t *testing.T) {
+	m := NewManager(nil)
+	m.runtimes["n1"] = &runtime{cfg: TunnelConfig{Name: "n1"}, status: StatusError, errMsg: "网络不通"}
+
+	m.ReloadConfigs([]TunnelConfig{{Name: "n1", Host: "new-host"}})
+
+	v := m.Views()[0]
+	if v.Status != StatusStopped || v.ErrMsg != "" {
+		t.Fatalf("编辑后旧错误应重置: %#v", v)
+	}
+	if m.runtimes["n1"].cfg.Host != "new-host" {
+		t.Fatal("运行副本未热更新")
+	}
+}
+
+// TestIdleDisconnectDetected 空闲隧道（无本地连接）感知服务端断开：
+// accept 循环发现不了 SSH 断连，靠 client.Wait() 兜底检测
+func TestIdleDisconnectDetected(t *testing.T) {
+	srv := newMockSSHServer(t, "root", "s3cret")
+	host, sshPort := mockAddrPort(t, srv.addr)
+	localPort := freeLocalPort(t)
+
+	cfg := TunnelConfig{
+		Name: "空闲隧道", Host: host, Port: sshPort, Username: "root",
+		AuthMethod: AuthPassword, Password: "s3cret",
+		LocalHost: "127.0.0.1", LocalPort: localPort,
+		RemoteHost: "localhost", RemotePort: 12345,
+	}
+
+	m := NewManager(nil)
+	m.ReloadConfigs([]TunnelConfig{cfg})
+	if err := m.Start(cfg.Name); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	defer m.Stop(cfg.Name)
+
+	srv.dropConns()
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if m.Views()[0].Status == StatusError {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	t.Fatalf("空闲隧道掉线未被检测到: %#v", m.Views())
 }

@@ -67,13 +67,20 @@ type RadioOption struct {
 
 // OpHandler 工具操作的执行回调：arg 仅 radio 类携带选中值。
 // 实现直接访问工具自身状态并在构造的 Result 里给出
-// 新内容/提示/变化后的操作区配置（Invoke 会在持有工具锁时调用）。
+// 新内容/提示/变化后的操作区配置（是否持锁由 Dispatch 的 mu 策略决定）。
 type OpHandler func(arg string) Result
 
-// ToolDesc Tools() 下发单元：元信息 + 操作区配置
+// ToolDesc Tools() 下发单元：元信息 + 操作区配置 + 后台运行信号
 type ToolDesc struct {
 	Meta    Meta     `json:"meta"`
 	Actions []Action `json:"actions"`
+	Running bool     `json:"running"` // 有后台任务在跑（侧栏提醒灯）
+}
+
+// DataReporter 有后台状态数据的工具实现：Data 返回 tool-update
+// 事件载荷（装配层经此取数据，避免类型断言回挖具体工具类型）
+type DataReporter interface {
+	Data() any
 }
 
 // ---- 构造函数：保持工具侧配置可读 ----

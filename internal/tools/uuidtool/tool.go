@@ -85,14 +85,9 @@ func (t *Tool) State() any {
 func (t *Tool) RunningInBackground() bool { return false }
 
 // Invoke 操作分发：在锁内查找并执行回调
+// Invoke 操作分发（回调含慢操作，自行加锁 → mu 传 nil）
 func (t *Tool) Invoke(op string, arg string) domain.Result {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	h, ok := t.handlers[op]
-	if !ok {
-		return domain.Result{IsError: true, Notice: "未知操作: " + op}
-	}
-	return h(arg)
+	return domain.Dispatch(nil, t.handlers, op, arg)
 }
 
 // --- 操作回调（锁内执行） ---

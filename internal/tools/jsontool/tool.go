@@ -40,12 +40,9 @@ func New(st State) *Tool {
 	t := &Tool{state: st}
 	t.handlers = map[string]domain.OpHandler{
 		"setIndent": t.opSetIndent, // 选中即生效：改状态 + 立即重格式化
-		"pretty":    t.opPretty,
-		"minify":    t.opMinify,
-		"escape":    t.opEscape,
-		"unescape":  t.opUnescape,
-		"c2u":       t.opChineseToUnicode,
-		"u2c":       t.opUnicodeToChinese,
+	}
+	for op, d := range transformOps {
+		t.handlers[op] = func(string) domain.Result { return t.runTransform(op, d) }
 	}
 	return t
 }
@@ -88,14 +85,9 @@ func (t *Tool) SetContent(s string) {
 }
 
 // Invoke 操作分发：在锁内查找并执行回调。op 取自 Actions 配置的 ID。
+// Invoke 操作分发（基座统一实现：锁内查表执行回调）
 func (t *Tool) Invoke(op string, arg string) domain.Result {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	h, ok := t.handlers[op]
-	if !ok {
-		return domain.Result{IsError: true, Notice: "未知操作: " + op}
-	}
-	return h(arg)
+	return domain.Dispatch(&t.mu, t.handlers, op, arg)
 }
 
 // --- 操作回调（锁内执行，可直接读写 t.content/t.indent） ---
@@ -112,58 +104,34 @@ func (t *Tool) opSetIndent(arg string) domain.Result {
 	return domain.Result{Content: out, Notice: "格式化完成", Actions: t.actions()}
 }
 
-func (t *Tool) opPretty(arg string) domain.Result {
-	return runTransform(t.content, t.state.Indent, "pretty")
+// transformOp 内容转换单元：纯函数 + 完成提示
+type transformOp struct {
+	fn     func(content, indent string) (string, error)
+	notice string
 }
 
-func (t *Tool) opMinify(arg string) domain.Result {
-	return runTransform(t.content, t.state.Indent, "minify")
+// transformOps op ID → 转换（单一事实源：handlers 表由此派生，
+// Actions 菜单项 ID 与这里的键一一对应）
+var transformOps = map[string]transformOp{
+	"pretty":   {func(c, i string) (string, error) { return Pretty(c, i) }, "格式化完成"},
+	"minify":   {func(c, _ string) (string, error) { return Minify(c) }, "压缩完成"},
+	"escape":   {func(c, _ string) (string, error) { return Escape(c) }, "转义完成"},
+	"unescape": {func(c, _ string) (string, error) { return Unescape(c) }, "反转义完成"},
+	"c2u":      {func(c, _ string) (string, error) { return ChineseToUnicode(c) }, "中文 → Unicode 完成"},
+	"u2c":      {func(c, _ string) (string, error) { return UnicodeToChinese(c) }, "Unicode → 中文 完成"},
 }
 
-func (t *Tool) opEscape(arg string) domain.Result {
-	return runTransform(t.content, t.state.Indent, "escape")
-}
-
-func (t *Tool) opUnescape(arg string) domain.Result {
-	return runTransform(t.content, t.state.Indent, "unescape")
-}
-
-func (t *Tool) opChineseToUnicode(arg string) domain.Result {
-	return runTransform(t.content, t.state.Indent, "c2u")
-}
-
-func (t *Tool) opUnicodeToChinese(arg string) domain.Result {
-	return runTransform(t.content, t.state.Indent, "u2c")
-}
-
-// runTransform 按操作名走本包的转换纯函数，结果统一包成 Result
-func runTransform(content, indent, op string) domain.Result {
-	var out string
-	var err error
-	switch op {
-	case "pretty":
-		out, err = Pretty(content, indent)
-	case "minify":
-		out, err = Minify(content)
-	case "escape":
-		out, err = Escape(content)
-	case "unescape":
-		out, err = Unescape(content)
-	case "c2u":
-		out, err = ChineseToUnicode(content)
-	case "u2c":
-		out, err = UnicodeToChinese(content)
-	default:
-		return domain.Result{IsError: true, Notice: "未知操作: " + op}
+// runTransform 走 op 对应的转换纯函数（锁内回调，直接读 t.content）。
+// 空白内容与 opSetIndent 同语义：静默返回原内容，不报解析错误
+func (t *Tool) runTransform(op string, d transformOp) domain.Result {
+	if trimEmpty(t.content) {
+		return domain.Result{}
 	}
+	out, err := d.fn(t.content, t.state.Indent)
 	if err != nil {
 		return domain.Result{IsError: true, Notice: err.Error()}
 	}
-	notice := map[string]string{
-		"pretty": "格式化完成", "minify": "压缩完成", "escape": "转义完成",
-		"unescape": "反转义完成", "c2u": "中文 → Unicode 完成", "u2c": "Unicode → 中文 完成",
-	}[op]
-	return domain.Result{Content: out, Notice: notice}
+	return domain.Result{Content: out, Notice: d.notice}
 }
 
 func trimEmpty(s string) bool {

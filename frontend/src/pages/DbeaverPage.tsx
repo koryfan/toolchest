@@ -1,5 +1,5 @@
 import {invoke} from '../actions';
-import {useStore} from '../store';
+import {useStore, onToolData, type DbeaverEntry} from '../store';
 import {showSuccess, showError} from '../components/Notice';
 import {Dialogs} from '@wailsio/runtime';
 import styles from './DbeaverPage.module.css';
@@ -7,16 +7,20 @@ import styles from './DbeaverPage.module.css';
 // DBeaver 凭据页：数据由 Go 解密下发（Invoke 结果 Data），
 // 本页只渲染 + 点击复制；目录选择/缓存/刷新在工具栏（Go 驱动 Actions）。
 
-interface CredentialEntry {
-  id: string;
-  name: string;
-  driver: string;
-  host: string;
-  port: number;
-  database: string;
-  dsn: string;
-  keys: Record<string, string>;
-}
+
+// 数据入口注册：Invoke 结果（select/refresh/export）与事件推送共用此回调。
+// 失败结果不带 entries，保留旧列表供对照
+onToolData('dbeaver', data => {
+  const d = data as {entries?: DbeaverEntry[]; dir?: string};
+  if (d.entries) {
+    useStore.getState().setDbeaverEntries(d.entries, d.dir);
+  }
+});
+// 启动时若有缓存目录（Go State.CurrentDir），refresh 恢复列表
+void invoke('dbeaver', 'refresh', '').catch(() => {
+  // 无缓存目录时 Go 返回错误（尚未选择目录），静默忽略
+});
+
 
 /** 复制单值（40 字符以上只提示已复制，与 JSON 树一致） */
 const copyValue = (key: string, value: string) => {
@@ -33,9 +37,9 @@ const copyValue = (key: string, value: string) => {
 };
 
 /** 单条导出文本：名称注释行 + DSN 行（与 Go ExportText 同格式） */
-const entryText = (entry: CredentialEntry): string => `# ${entry.name || entry.id}\n${entry.dsn}`;
+const entryText = (entry: DbeaverEntry): string => `# ${entry.name || entry.id}\n${entry.dsn}`;
 
-function Card({entry}: { entry: CredentialEntry }) {
+function Card({entry}: { entry: DbeaverEntry }) {
   // user 在上、password 随后，其余键字母序
   const order = ['user', 'password'];
   const keys = Object.keys(entry.keys).sort((a, b) => {

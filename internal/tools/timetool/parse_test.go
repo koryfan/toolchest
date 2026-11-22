@@ -1,4 +1,4 @@
-package transform
+package timetool
 
 import (
 	"strings"
@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func TestTimeParser_Digits(t *testing.T) {
+func TestParseTime_Digits(t *testing.T) {
 	// 固定时间戳验证：1700000000 = 2023-11-14 22:13:20 UTC（本地东八区 11-15 星期三）
 	tests := []struct {
 		name        string
@@ -17,15 +17,12 @@ func TestTimeParser_Digits(t *testing.T) {
 		wantUTC     string
 		wantWeekday string
 	}{
-		{"秒级 10 位", "1700000000", true, "1700000000", "1700000000000", "2023-11-14 22:13:20 UTC", "星期三"},
-		{"毫秒级 13 位", "1700000000000", true, "1700000000", "1700000000000", "2023-11-14 22:13:20 UTC", "星期三"},
+		{"秒级 10 位", "1700000000", true, "1700000000", "1700000000000", "2023-11-14 22:13:20 UTC", "星期二"},
+		{"毫秒级 13 位", "1700000000000", true, "1700000000", "1700000000000", "2023-11-14 22:13:20 UTC", "星期二"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := NewTimeParser()
-			p.SetInput(tt.input)
-			p.Parse()
-			r := p.Result()
+			r := ParseTime(tt.input, time.UTC)
 			if r.Valid != tt.wantValid {
 				t.Errorf("Valid = %v, want %v", r.Valid, tt.wantValid)
 			}
@@ -45,7 +42,7 @@ func TestTimeParser_Digits(t *testing.T) {
 	}
 }
 
-func TestTimeParser_DateString(t *testing.T) {
+func TestParseTime_DateString(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
@@ -59,10 +56,7 @@ func TestTimeParser_DateString(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := NewTimeParser()
-			p.SetTimezone(time.UTC) // 测试用 UTC，避免环境时区差异
-			p.SetInput(tt.input)
-			r := p.Result()
+			r := ParseTime(tt.input, time.UTC) // 测试用 UTC，避免环境时区差异
 			if !r.Valid {
 				t.Fatalf("期望 Valid=true，got Error=%q", r.Error)
 			}
@@ -73,7 +67,19 @@ func TestTimeParser_DateString(t *testing.T) {
 	}
 }
 
-func TestTimeParser_Invalid(t *testing.T) {
+func TestParseTime_LocalDefault(t *testing.T) {
+	// loc 为 nil 时用本地时区：LocalTime 必须能反映本机时区偏移
+	r := ParseTime("1700000000", nil)
+	if !r.Valid {
+		t.Fatalf("期望 Valid=true，got Error=%q", r.Error)
+	}
+	want := time.Unix(1700000000, 0).Format("2006-01-02 15:04:05 -0700 MST")
+	if r.LocalTime != want {
+		t.Errorf("LocalTime = %q, want %q", r.LocalTime, want)
+	}
+}
+
+func TestParseTime_Invalid(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
@@ -84,10 +90,7 @@ func TestTimeParser_Invalid(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			p := NewTimeParser()
-			p.SetInput(tt.input)
-			p.Parse()
-			r := p.Result()
+			r := ParseTime(tt.input, nil)
 			if r.Valid {
 				t.Error("期望 Valid=false")
 			}
@@ -98,47 +101,13 @@ func TestTimeParser_Invalid(t *testing.T) {
 	}
 }
 
-func TestTimeParser_Empty(t *testing.T) {
-	p := NewTimeParser()
-	p.SetInput("")
-	p.Parse()
-	r := p.Result()
+func TestParseTime_Empty(t *testing.T) {
+	r := ParseTime("", nil)
 	if r.Valid {
 		t.Error("空输入不应 Valid")
 	}
 	if r.Error != "" {
 		t.Errorf("空输入不应有错误，got %q", r.Error)
-	}
-}
-
-// Result 不显式调 Parse 也能取到结果（内部会触发 Parse）
-func TestTimeParser_AutoParse(t *testing.T) {
-	p := NewTimeParser()
-	p.SetInput("1700000000")
-	r := p.Result() // 不调 Parse，应自动解析
-	if !r.Valid {
-		t.Fatalf("期望自动 Parse 后 Valid=true，got Error=%q", r.Error)
-	}
-	if r.UnixSecond != "1700000000" {
-		t.Errorf("UnixSecond = %q, want 1700000000", r.UnixSecond)
-	}
-}
-
-// 切换输入后重新解析
-func TestTimeParser_ReparseAfterInputChange(t *testing.T) {
-	p := NewTimeParser()
-	p.SetInput("1700000000")
-	p.Parse()
-	r1 := p.Result()
-	if r1.UnixSecond != "1700000000" {
-		t.Fatalf("首次解析 UnixSecond = %q", r1.UnixSecond)
-	}
-	// 改输入后应重新解析
-	p.SetInput("1700000001")
-	p.Parse()
-	r2 := p.Result()
-	if r2.UnixSecond != "1700000001" {
-		t.Errorf("改输入后 UnixSecond = %q, want 1700000001", r2.UnixSecond)
 	}
 }
 
