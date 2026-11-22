@@ -16,9 +16,9 @@ onToolData('dbeaver', data => {
     useStore.getState().setDbeaverEntries(d.entries, d.dir);
   }
 });
-// 启动时若有缓存目录（Go State.CurrentDir），refresh 恢复列表
-void invoke('dbeaver', 'refresh', '').catch(() => {
-  // 无缓存目录时 Go 返回错误（尚未选择目录），静默忽略
+// silent：无缓存目录时 Go 返回「尚未选择目录」是正常启动态，不应弹错
+void invoke('dbeaver', 'refresh', '', true).catch(() => {
+  // 请求本身失败（桥接异常）也静默，用户可手动刷新
 });
 
 
