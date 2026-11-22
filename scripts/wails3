@@ -1,0 +1,3 @@
+#!/bin/sh
+# wails3 shim: forward to the version pinned by go.mod tool directive
+exec go tool wails3 "$@"

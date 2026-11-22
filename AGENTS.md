@@ -43,10 +43,10 @@ frontend/src/
 - 构建：`go build .`（**不要 `./...`**，会扫到模板平台目录报错）
 - 测试：`go test ./internal/... ./pkg/... .`
 - 前端构建：`cd frontend && npm run build`
-- bindings 再生成：`wails3 generate bindings -clean -ts -i`（仓库根目录，改 Go 服务/类型后必跑）
+- bindings 再生成：`go tool wails3 generate bindings -clean -ts -i`（仓库根目录，改 Go 服务/类型后必跑）
 - 安装到本机：`task install`（构建前端 + 二进制 + ~/.local/bin + 桌面图标，无需 sudo）
 - 卸载：`task uninstall`
-- 开发模式：`wails3 dev` 或 `task dev`
+- 开发模式：`task dev`
 
 ## 关键约定
 
@@ -57,17 +57,16 @@ frontend/src/
 - **后台状态推送**：有自主变化状态的工具（如隧道掉线）经 Wails 事件（toolset/events.go Emit）推前端，前端 store 订阅刷新 + 侧栏提醒灯（RunningInBackground）
 - **Wails v3 beta.9 无窗口关闭拦截**：退出确认弹窗不可实现；退出时 main defer CloseAll 清理隧道资源
 - **包名不用下划线**（jsontool/timetool）；构建只用 `go build .`（`./...` 会扫到模板平台目录）；测试 `go test ./internal/... ./pkg/... .`
-- **bindings 再生成**：改 Go 服务/类型后跑 `wails3 generate bindings -clean -ts -i`（必须从仓库根目录跑，且带 -ts -i）；然后 frontend `npm run build`
+- **bindings 再生成**：改 Go 服务/类型后跑 `go tool wails3 generate bindings -clean -ts -i`（必须从仓库根目录跑，且带 -ts -i）；然后 frontend `npm run build`
+- **wails3 走 go.mod tool directive**（不装全局）：调用一律 `go tool wails3 ...`。坑：wails 生成的 `build/*/Taskfile.yml` 和 `build/config.yml` 里写的裸 `wails3` 需要仓库内 shim `scripts/wails3`（转发到 `go tool wails3`）在 PATH 上；go-task 的 env/cmds 改 PATH 均不生效（mvdan/sh 启动时固定查找路径），所以 `task dev` 在命令前缀里加了 `PATH={{.ROOT_DIR}}/scripts:$PATH`。直接跑 `task build`/`task run`/`task package` 仍会因裸 `wails3` 失败，需要 `PATH=scripts:$PATH task build` 这样带前缀（后续需要时再包一层）
 - 提示 toast 用 react-hot-toast 原生默认样式（showSuccess/showError 纯函数导出，非 React 上下文可直接调）
 
 ## 进度
 
 已完成：
+
 - JSON 工具（CodeMirror 代码视图：行号/折叠/缩进参考线/VS Code 风格搜索；树形视图 @uiw/react-json-view；格式化/压缩/转义/中 U 互转，缩进选中即重格式化并持久化）
 - 时间戳工具（多格式解析结果、当前时间戳）
 - 后端驱动架构（spec 见 docs/superpowers/specs/，三步实施全部完成）
 - SSH 隧道工具（列表卡片/分组、新增编辑弹窗、认证三式、direct/exec 双模式转发、开启停止测试删除、掉线检测事件推送、侧栏提醒灯、配置落 config.yaml tunnel 节）
 - config 泛型容器重构（map[string]string → 强类型 State + config.Decode[T]）
-
-待做：
-- 无（Wails v3 支持关闭拦截后可补退出确认弹窗）
